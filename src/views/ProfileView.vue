@@ -10,7 +10,6 @@
           <p><strong>Email:</strong> {{ auth.me.email || '—' }}</p>
           <div class="actions">
             <button class="btn primary" @click="startEdit">Edit</button>
-            <button class="btn" @click="logout">Logout</button>
           </div>
         </div>
 
@@ -29,38 +28,37 @@
             <button type="submit" class="btn primary" :disabled="isSaving">
               {{ isSaving ? 'Saving...' : 'Save' }}
             </button>
-            <button type="button" class="btn" @click="cancelEdit" :disabled="isSaving">Отмена</button>
+            <button type="button" class="btn" @click="cancelEdit" :disabled="isSaving">Cancel</button>
           </div>
         </form>
       </div>
 
-      <!-- Albums Section -->
       <div class="albums-section">
-        <h3>My Albums</h3>
-        <div v-if="loading" class="loading">Loading Albums...</div>
+        <h3>Albums</h3>
+
+        <div v-if="loading" class="load">Loading Albums...</div>
         <div v-else-if="albums.length === 0" class="no-albums">
           Nejsou zadne alba.
         </div>
         <div v-else class="albums-grid">
-          <router-link 
-            v-for="album in albums" 
-            :key="album.id" 
-            :to="{ name: 'album', params: { id: album.id }}"
-            class="album-card"
-          >
-            <div class="album-info">
-              <span class="album-title">{{ album.title }}</span>
-              <span class="album-count" v-if="album.photos_count">{{ album.photos_count }} фото</span>
-            </div>
-          </router-link>
-        </div>
+           <AlbumCard 
+              v-for="a in visibleAlbums"
+              :key="a.id"
+              :album="a"
+              @open="openAlbum(a.id)"
+              @rename="startRename"
+              @delete="deleteAlbum"
+              @changeVisibility="updateVisibility"
+            />
+          </div>
       </div>
+      
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useAuth } from '../stores/auth'
 import { useRouter } from 'vue-router'
 import api from '../utils/api'
@@ -98,7 +96,6 @@ async function saveProfile() {
       email: form.email
     })
     
-    // Обновляем данные в сторе
     Object.assign(auth.me, data)
     isEditing.value = false
   } catch (error) {
@@ -139,6 +136,16 @@ function logout(){
   auth.logout()
   router.push('/albums')
 }
+
+async function updateVisibility(album) {
+  await api.patch(`/albums/${album.id}`, { visibility: album.visibility })
+}
+
+const visibleAlbums = computed(() =>
+  albums.value.filter(a =>
+    a.visibility === 'public' || a.user_id === auth.me?.id
+  )
+)
 
 onMounted(load)
 </script>
@@ -236,4 +243,32 @@ onMounted(load)
   padding: 32px;
   color: #666;
 }
+
+.select {
+  display: inline-block;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #333;
+}
+
+.select:hover {
+  background-color: #f5f5f5;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #42b983;
+  box-shadow: 0 0 0 2px rgba(66, 185, 131, 0.2);
+}
+
+.select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 </style>
