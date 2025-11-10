@@ -50,9 +50,14 @@
               @delete="deleteAlbum"
               @changeVisibility="updateVisibility"
             />
-          </div>
+            <button class="btn" @click="showCreate = true">New Album</button>
+            <AddAlbumModal
+              v-if="showCreate"
+              @close="showCreate = false"
+              @created="onCreated"
+            />
+          </div> 
       </div>
-      
     </div>
   </div>
 </template>
@@ -63,6 +68,8 @@ import { useAuth } from '../stores/auth'
 import { useRouter } from 'vue-router'
 import api from '../utils/api'
 import AlbumCard from '../components/AlbumCard.vue'
+import AddAlbumModal from '../components/AddAlbumModal.vue'
+
 
 const auth = useAuth()
 const router = useRouter()
@@ -70,11 +77,14 @@ const isEditing = ref(false)
 const isSaving = ref(false)
 const loading = ref(false)
 const albums = ref([])
+const showCreate = ref(false)
 
 const form = reactive({
   name: '',
   email: ''
 })
+
+async function onCreated(){ showCreate.value = false; await load() }
 
 function startEdit() {
   form.name = auth.me.name || ''
