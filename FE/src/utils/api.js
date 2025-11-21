@@ -2,7 +2,9 @@ import axios from 'axios'
 import { useAuth } from '../stores/auth'
 
 const api = axios.create({
-  baseURL: 'https://www.stud.fit.vutbr.cz/~xkaval05/laravel/api',
+  // vepsat vlastni api url ktery vypisuje vas BE
+  //baseURL: 'https://www.stud.fit.vutbr.cz/~xkaval05/laravel/api',
+  baseURL: 'http://127.0.0.1:8000/api',
   withCredentials: false,
   headers: { Accept: 'application/json' }
 })

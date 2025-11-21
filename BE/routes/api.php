@@ -1,0 +1,69 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\AlbumController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\ShareController;
+use App\Http\Controllers\BookingController;
+use Illuminate\Http\Request;
+// Авторизация
+
+Route::get('/probe', fn () => response()->json([
+    'ok' => true,
+    'ver' => app()->version(),
+]));
+
+
+Route::post('/auth/register',[AuthController::class,'register']);
+Route::post('/auth/login',[AuthController::class,'login']);
+
+
+Route::middleware('auth:sanctum')->group(function() {
+    // get token info, logout, update profile, delete account
+    Route::get('/auth/me',[AuthController::class,'me']);
+    Route::post('/auth/logout',[AuthController::class,'logout']);
+    Route::patch('/auth',[AuthController::class,'update']);
+    Route::delete('/auth',[AuthController::class,'destroy']);
+});
+
+// Публичные выборки
+Route::get('/public/photos',[PhotoController::class,'index']);   // ?public=1
+Route::get('/public/albums',[AlbumController::class,'index']);   // ?public=1
+Route::get('/public/posts',[PostController::class,'index']);     // ?public=1
+
+// Приватные ссылки
+Route::get('/share/{token}', [ShareController::class,'open']);
+
+// Авторизованные
+Route::middleware('auth:sanctum')->group(function () {
+    // управление фото
+    Route::get('/photos',[PhotoController::class,'index']);
+    Route::post('/photos',[PhotoController::class,'store']);
+    Route::get('/photos/{photo}',[PhotoController::class,'show']);
+    Route::patch('/photos/{photo}',[PhotoController::class,'update']);
+    Route::delete('/photos/{photo}',[PhotoController::class,'destroy']);
+    // бронирование фото
+    Route::post('/bookings', [BookingController::class, 'store']);     // создать бронь
+    Route::get('/bookings', [BookingController::class, 'index']);      // получить список броней
+    
+    // управление альбомами
+    Route::get('/albums',[AlbumController::class,'index']);
+    Route::post('/albums',[AlbumController::class,'store']);
+    Route::get('/albums/{album}',[AlbumController::class,'show']);
+    Route::patch('/albums/{album}',[AlbumController::class,'update']);
+    Route::delete('/albums/{album}',[AlbumController::class,'destroy']);
+    Route::post('/albums/{album}/add-photo',[AlbumController::class,'addPhoto']);
+    Route::delete('/albums/{album}/remove-photo/{photo}',[AlbumController::class,'removePhoto']);
+
+    Route::get('/posts',[PostController::class,'index']);
+    Route::post('/posts',[PostController::class,'store']);
+    Route::get('/posts/{post}',[PostController::class,'show']);
+    Route::patch('/posts/{post}',[PostController::class,'update']);
+    Route::delete('/posts/{post}',[PostController::class,'destroy']);
+    Route::delete('/posts/{post}/photos/{photo}', [PostController::class, 'removePhoto']);
+
+    Route::post('/shares',[ShareController::class,'create']);
+    Route::delete('/shares',[ShareController::class,'revoke']);
+});

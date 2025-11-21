@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 node_modules/
+
+# Laravel backend
+BE/vendor/
+BE/node_modules/
+BE/.env
