@@ -1,0 +1,1284 @@
+{
+	"info": {
+		"_postman_id": "e09eda25-9d1d-4f86-9710-19eeb7c36f8c",
+		"name": "Pictera API",
+		"description": "kolekce pozadavku Photo API na eva.  \n{{token}} - promenna pro auth, garantuje uzivatelsky pristup\n\nhttps je napsan kazdy zvlast.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49800098",
+		"_collection_link": "https://kovdima123-159844.postman.co/workspace/kramaNory's-Workspace~634224bf-ea58-4838-8727-195272c324d6/collection/49800098-e09eda25-9d1d-4f86-9710-19eeb7c36f8c?action=share&source=collection_link&creator=49800098"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Tester\",\n  \"email\": \"user1@example.com\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/auth/register",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Регистрация пользователя и выдача токена (Sanctum PAT)."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user1@example.com\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/auth/login",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Логин и получение токена."
+					},
+					"response": []
+				},
+				{
+					"name": "Me",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/auth/me",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Текущий пользователь по Bearer-токену."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/auth/logout",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Выход (ревокация текущего токена)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Upload Avatar",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "avatar",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/user/avatar",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"user",
+								"avatar"
+							]
+						},
+						"description": "Загрузка аватара пользователя."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Avatar",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/user/avatar",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"user",
+								"avatar"
+							]
+						},
+						"description": "Удаление аватара пользователя."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Photos",
+			"item": [
+				{
+					"name": "Upload Photo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"value": "",
+									"type": "file"
+								},
+								{
+									"key": "title",
+									"value": "My photo",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "optional desc",
+									"type": "text"
+								},
+								{
+									"key": "visibility",
+									"value": "public",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/photos",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"photos"
+							]
+						},
+						"description": "Загрузка фотографии (multipart/form-data)."
+					},
+					"response": []
+				},
+				{
+					"name": "List My Photos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/photos",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"photos"
+							]
+						},
+						"description": "Мои фото (пагинация)."
+					},
+					"response": []
+				},
+				{
+					"name": "List Public Photos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/public/photos",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"public",
+								"photos"
+							]
+						},
+						"description": "Публичные фото без авторизации."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Photo by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/photos/1",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"photos",
+								"1"
+							]
+						},
+						"description": "Детали фото по ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Photo",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"New title\",\n  \"visibility\": \"public\"\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/photos/1",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"photos",
+								"1"
+							]
+						},
+						"description": "Обновление полей фото."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Photo",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/photos/1",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"photos",
+								"1"
+							]
+						},
+						"description": "Удаление фото."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Albums",
+			"item": [
+				{
+					"name": "List Albums",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/albums",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"albums"
+							]
+						},
+						"description": "Список альбомов."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Album",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "My Album",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "optional",
+									"type": "text"
+								},
+								{
+									"key": "cover_file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/albums",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"albums"
+							]
+						},
+						"description": "Создание альбома."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Album",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/albums/1",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"albums",
+								"1"
+							]
+						},
+						"description": "Детали альбома."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Album",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated name\"\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/albums/1",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"albums",
+								"1"
+							]
+						},
+						"description": "Обновление альбома."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Album",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/albums/1",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"albums",
+								"1"
+							]
+						},
+						"description": "Удаление альбома."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Photo to Album",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"photo_id\": 5\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/albums/1/add-photo",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"albums",
+								"1",
+								"add-photo"
+							]
+						},
+						"description": "Добавить фото в альбом."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Photo from Album",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/albums/1/remove-photo/5",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"albums",
+								"1",
+								"remove-photo",
+								"5"
+							]
+						},
+						"description": "Удалить фото из альбома."
+					},
+					"response": []
+				},
+				{
+					"name": "Set Album Cover",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo_id",
+									"value": "1",
+									"description": "ID существующего фото, чтобы сделать его обложкой",
+									"type": "text"
+								},
+								{
+									"key": "cover_file",
+									"description": "Или загрузить новый файл для обложки",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/albums/1/set-cover",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"albums",
+								"1",
+								"set-cover"
+							]
+						},
+						"description": "Установить обложку для альбома. Можно передать `photo_id` существующего фото или загрузить новый файл через `cover_file`."
+					},
+					"response": []
+				},
+				{
+					"name": "Reorder Album Photos",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"photo_ids\": [3, 1, 2]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/albums/1/reorder-photos",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"albums",
+								"1",
+								"reorder-photos"
+							]
+						},
+						"description": "Изменить порядок фотографий в альбоме. Передайте массив ID фотографий в желаемом порядке."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Posts",
+			"item": [
+				{
+					"name": "List Posts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/posts",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"posts"
+							]
+						},
+						"description": "Список постов."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Post",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"New post\",\n  \"content\": \"text\"\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/posts",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"posts"
+							]
+						},
+						"description": "Создать пост."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Post",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/posts/1",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"posts",
+								"1"
+							]
+						},
+						"description": "Детали поста."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Post",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated title\"\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/posts/1",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"posts",
+								"1"
+							]
+						},
+						"description": "Обновить пост."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Post",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/posts/1",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"posts",
+								"1"
+							]
+						},
+						"description": "Удалить пост."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Photo from Post",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/posts/1/photos/5",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"posts",
+								"1",
+								"photos",
+								"5"
+							]
+						},
+						"description": "Удалить фото из поста."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Shares",
+			"item": [
+				{
+					"name": "Create Share",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"photo_id\": 5,\n  \"type\": \"view\"\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/shares",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"shares"
+							]
+						},
+						"description": "Создать приватную ссылку на фото."
+					},
+					"response": []
+				},
+				{
+					"name": "Open Share (public)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/share/REPLACE_TOKEN",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"share",
+								"REPLACE_TOKEN"
+							]
+						},
+						"description": "Открыть приватную ссылку по токену (публично)."
+					},
+					"response": []
+				},
+				{
+					"name": "Revoke Share",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/shares",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"shares"
+							]
+						},
+						"description": "Отозвать ссылку."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Bookings",
+			"item": [
+				{
+					"name": "List Bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/bookings",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"bookings"
+							]
+						},
+						"description": "Список броней."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"photo_id\": 5,\n  \"date\": \"2025-11-08\"\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/bookings",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"bookings"
+							]
+						},
+						"description": "Создать бронь."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Probe",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/probe",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"probe"
+							]
+						},
+						"description": "Проверка доступности API."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "token",
+			"value": ""
+		}
+	]
+}

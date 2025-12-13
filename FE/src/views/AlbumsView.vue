@@ -14,6 +14,7 @@
         @rename="renameAlbum"
         @open="openAlbum(a.id)"
         @delete="deleteAlbum(a.id)"
+        @setCover="promptCover"
       />
     </div>
 
@@ -22,8 +23,13 @@
       @close="showCreate = false"
       @created="onCreated"
     />
+    
+    <input type="file" ref="coverInput" @change="uploadCover" style="display: none" accept="image/*">
   </div>
 </template>
+
+
+
 
 <script setup>
 import { onMounted, ref } from 'vue'
@@ -36,6 +42,8 @@ const router = useRouter()
 const albums = ref([])
 const loading = ref(true)
 const showCreate = ref(false)
+const coverInput = ref(null)
+const albumForCover = ref(null)
 
 async function load(){
   loading.value = true
@@ -53,6 +61,36 @@ async function deleteAlbum(id){
 }
 function openAlbum(id){ router.push({ name: 'album', params: { id }}) }
 async function onCreated(){ showCreate.value = false; await load() }
+
+function promptCover(album){
+  albumForCover.value = album
+  coverInput.value.click()
+}
+
+async function uploadCover(event){
+  const file = event.target.files[0]
+  if (!file) return
+  const data = new FormData()
+  data.append('cover_file', file)
+
+  try {
+    console.log(`Uploading cover for album ${albumForCover.value.id}...`)
+    const { data: updatedAlbum } = await api.post(`/albums/${albumForCover.value.id}/cover`, data)
+    console.log('Upload successful:', updatedAlbum)
+    
+    const idx = albums.value.findIndex(a => a.id === updatedAlbum.id)
+    if (idx !== -1) albums.value[idx] = updatedAlbum
+  } catch (error) {
+    console.error('Error uploading cover photo:', error)
+    alert('An error occurred while uploading the cover. Please check the developer console for more details.')
+  } finally {
+    albumForCover.value = null
+    if (event.target) {
+      event.target.value = ''
+    }
+  }
+}
+
 
 onMounted(load)
 </script>

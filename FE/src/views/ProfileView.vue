@@ -101,16 +101,12 @@ async function saveProfile() {
   
   try {
     isSaving.value = true
-    const { data } = await api.post('/auth/me', {
-      name: form.name,
-      email: form.email
-    })
-    
-    Object.assign(auth.me, data)
+    // Используем действие из хранилища auth, которое уже настроено правильно.
+    await auth.updateProfile({ name: form.name, email: form.email })
     isEditing.value = false
   } catch (error) {
-    console.error('Chyba pri ulozeni alba:', error)
-    alert('Neni mozne ulozit zmeny')
+    console.error('Error saving profile:', error)
+    alert('Could not save changes. Please try again.')
   } finally {
     isSaving.value = false
   }

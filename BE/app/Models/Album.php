@@ -13,4 +13,6 @@ class Album extends Model
     public function photos() { return $this->belongsToMany(Photo::class); }
 
     public function shares() { return $this->morphMany(Share::class, 'shareable'); }
+    
+    public function coverPhoto() { return $this->belongsTo(Photo::class, 'cover_photo_id'); }
 }

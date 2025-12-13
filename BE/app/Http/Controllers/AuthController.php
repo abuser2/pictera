@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
@@ -50,15 +51,8 @@ class AuthController extends Controller
             'is_photographer' => 'sometimes|boolean',
         ]);
 
-        if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
-        }
-
-        // boolean из запроса корректно приводим
-        if ($req->has('is_photographer')) {
-            $data['is_photographer'] = $req->boolean('is_photographer');
-        }
-
+        // Метод fill() использует $fillable из модели и автоматически обработает 'password' и 'is_photographer'
+        // благодаря настройкам 'casts' в модели User.
         $user->fill($data);
         $user->save();
 
@@ -84,5 +78,37 @@ class AuthController extends Controller
     public function logout(Request $req) {
         $req->user()->currentAccessToken()->delete();
         return response()->json(['message'=>'ok']);
+    }
+
+    public function updateAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => 'required|image',
+        ]);
+
+        $user = $request->user();
+
+        if ($user->avatar_path && Storage::disk('public')->exists($user->avatar_path)) {
+            Storage::disk('public')->delete($user->avatar_path);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $user->forceFill(['avatar_path' => $path])->save();
+
+        return response()->json(['user' => $user, 'message' => 'Avatar updated successfully']);
+    }
+
+    public function deleteAvatar(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->avatar_path) {
+            if (Storage::disk('public')->exists($user->avatar_path)) {
+                Storage::disk('public')->delete($user->avatar_path);
+            }
+            $user->forceFill(['avatar_path' => null])->save();
+        }
+
+        return response()->json(['user' => $user, 'message' => 'Avatar deleted successfully']);
     }
 }

@@ -36,6 +36,7 @@ Route::get('/public/posts',[PostController::class,'index']);     // ?public=1
 // Приватные ссылки
 Route::get('/share/{token}', [ShareController::class,'open']);
 
+
 // Авторизованные
 Route::middleware('auth:sanctum')->group(function () {
     // управление фото
@@ -49,6 +50,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bookings', [BookingController::class, 'index']);      // получить список броней
     
     // управление альбомами
+    // Внутри группы с middleware 'auth:sanctum'
+    Route::post('/albums/{album}/cover', [AlbumController::class, 'setCover']);
+
     Route::get('/albums',[AlbumController::class,'index']);
     Route::post('/albums',[AlbumController::class,'store']);
     Route::get('/albums/{album}',[AlbumController::class,'show']);
@@ -56,6 +60,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/albums/{album}',[AlbumController::class,'destroy']);
     Route::post('/albums/{album}/add-photo',[AlbumController::class,'addPhoto']);
     Route::delete('/albums/{album}/remove-photo/{photo}',[AlbumController::class,'removePhoto']);
+    
+    // управление пользователем
+    Route::post('/user/avatar', [AuthController::class, 'updateAvatar']);
+    Route::delete('/user/avatar', [AuthController::class, 'deleteAvatar']);
 
     Route::get('/posts',[PostController::class,'index']);
     Route::post('/posts',[PostController::class,'store']);

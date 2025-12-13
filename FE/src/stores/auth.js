@@ -21,8 +21,10 @@ export const useAuth = defineStore('auth', {
       this.me = data
     },
     async updateProfile(profileData) {
-      const { data } = await api.post('/profile', profileData)
-      this.me = { ...this.me, ...data }
+      // Исправляем: используем PATCH и правильный URL /auth, как ожидает бэкенд.
+      const { data } = await api.patch('/auth', profileData)
+      // Ответ от сервера уже содержит полный обновленный объект пользователя.
+      this.me = data
       return data
     },
     async logout() {
