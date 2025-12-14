@@ -8,6 +8,7 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\LikeController;
 use Illuminate\Http\Request;
 // Авторизация
 
@@ -86,4 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Подписки
     Route::post('/users/{id}/follow', [UserController::class, 'follow']);
     Route::delete('/users/{id}/follow', [UserController::class, 'unfollow']);
+
+    // Лайки
+    Route::post('/likes/toggle', [LikeController::class, 'toggle']);
 });

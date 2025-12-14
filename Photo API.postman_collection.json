@@ -200,69 +200,7 @@
 					"response": []
 				},
 				{
-					"name": "Delete Avatar",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}"
-							}
-						],
-						"url": {
-							"raw": "http://127.0.0.1:8000/api/user/avatar",
-							"protocol": "http",
-							"host": [
-								"127",
-								"0",
-								"0",
-								"1:8000"
-							],
-							"path": [
-								"api",
-								"user",
-								"avatar"
-							]
-						},
-						"description": "Удаление аватара пользователя."
-					},
-					"response": []
-				},
-				{
-					"name": "Get User Profile",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "http://127.0.0.1:8000/api/users/1",
-							"protocol": "http",
-							"host": [
-								"127",
-								"0",
-								"0",
-								"1:8000"
-							],
-							"path": [
-								"api",
-								"users",
-								"1"
-							]
-						},
-						"description": "Получить профиль пользователя (публично)."
-					},
-					"response": []
-				},
-				{
-					"name": "Follow User",
+					"name": "Toggle Like",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -273,44 +211,18 @@
 							{
 								"key": "Authorization",
 								"value": "Bearer {{token}}"
-							}
-						],
-						"url": {
-							"raw": "http://127.0.0.1:8000/api/users/2/follow",
-							"protocol": "http",
-							"host": [
-								"127",
-								"0",
-								"0",
-								"1:8000"
-							],
-							"path": [
-								"api",
-								"users",
-								"2",
-								"follow"
-							]
-						},
-						"description": "Подписаться на пользователя."
-					},
-					"response": []
-				},
-				{
-					"name": "Unfollow User",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
 							},
 							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}"
+								"key": "Content-Type",
+								"value": "application/json"
 							}
 						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"photo\",\n  \"id\": 1\n}"
+						},
 						"url": {
-							"raw": "http://127.0.0.1:8000/api/users/2/follow",
+							"raw": "http://127.0.0.1:8000/api/likes/toggle",
 							"protocol": "http",
 							"host": [
 								"127",
@@ -320,12 +232,11 @@
 							],
 							"path": [
 								"api",
-								"users",
-								"2",
-								"follow"
+								"likes",
+								"toggle"
 							]
 						},
-						"description": "Отписаться от пользователя."
+						"description": "Поставить или убрать лайк. type: photo, album, post."
 					},
 					"response": []
 				}
