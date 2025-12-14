@@ -28,3 +28,6 @@ node_modules/
 BE/vendor/
 BE/node_modules/
 
+# Environment
+BE/.env
+!BE/.env.example
