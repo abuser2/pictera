@@ -11,7 +11,7 @@
         v-for="a in albums"
         :key="a.id"
         :album="a"
-        @rename="renameAlbum"
+        @request-rename="openRenameModal"
         @open="openAlbum(a.id)"
         @delete="deleteAlbum(a.id)"
         @setCover="promptCover"
@@ -25,6 +25,24 @@
     />
     
     <input type="file" ref="coverInput" @change="uploadCover" style="display: none" accept="image/*">
+        <!-- Rename Modal -->
+    <div v-if="showRename" class="backdrop" @click.self="showRename = false">
+      <transition name="fade" appear>
+        <div class="modal">
+          <h2 class="title">Rename Album</h2>
+          <div class="stack">
+            <div class="field">
+              <label>Name</label>
+              <input v-model="renameName" placeholder="Album name" @keyup.enter="confirmRename" />
+            </div>
+            <div class="row gap" style="margin-top: 10px;">
+              <button class="btn" @click="confirmRename">Save</button>
+              <button class="btn ghost" @click="showRename = false">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
   </div>
 </template>
 
@@ -44,6 +62,9 @@ const loading = ref(true)
 const showCreate = ref(false)
 const coverInput = ref(null)
 const albumForCover = ref(null)
+const showRename = ref(false)
+const renameName = ref('')
+const albumToRename = ref(null)
 
 async function load(){
   loading.value = true
@@ -51,16 +72,28 @@ async function load(){
   albums.value = data?.data || data
   loading.value = false
 }
-async function renameAlbum({ id, title }){
-  await api.patch(`/albums/${id}`, { name: title })
+
+function openRenameModal(album) {
+  albumToRename.value = album
+  renameName.value = album.name
+  showRename.value = true
+}
+
+async function confirmRename(){
+  if (!albumToRename.value) return
+  await api.patch(`/albums/${albumToRename.value.id}`, { name: renameName.value })
+  showRename.value = false
+  albumToRename.value = null
+  window.dispatchEvent(new Event('albums-updated'))
   await load()
 }
 async function deleteAlbum(id){
   await api.delete(`/albums/${id}`)
+  window.dispatchEvent(new Event('albums-updated'))
   await load()
 }
 function openAlbum(id){ router.push({ name: 'album', params: { id }}) }
-async function onCreated(){ showCreate.value = false; await load() }
+async function onCreated(){ showCreate.value = false; window.dispatchEvent(new Event('albums-updated')); await load() }
 
 function promptCover(album){
   albumForCover.value = album
@@ -94,3 +127,19 @@ async function uploadCover(event){
 
 onMounted(load)
 </script>
+
+<style scoped>
+.backdrop { position:fixed; inset:0; display:grid; place-items:center; background:#0008; backdrop-filter:blur(4px); z-index:50; }
+.modal { background:#1c1c1e; border:1px solid #2c2c2e; border-radius:16px; padding:20px; width:380px; }
+.title { margin:0 0 8px; text-align:center; color:#f0f0f0; }
+.stack { display:flex; flex-direction:column; gap:12px; }
+.field { display:flex; flex-direction:column; gap:6px; }
+.field label { font-size:.9em; color:#aaa; }
+.field input { background:#2a2a2d; border:1px solid #3a3a3d; border-radius:8px; padding:8px; color:#fff; }
+.row { display:flex; align-items:center; }
+.gap { gap:8px; }
+.btn { background:#d0813b; color:#111; border:0; border-radius:10px; padding:8px 12px; cursor:pointer; font-weight: 600; }
+.btn.ghost { background:transparent; color:#ddd; border:1px solid #3a3a3a; }
+.fade-enter-active,.fade-leave-active{ transition:opacity .2s ease; }
+.fade-enter-from,.fade-leave-to{ opacity:0; }
+</style>

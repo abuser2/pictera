@@ -2,9 +2,17 @@
   <div class="backdrop" @click.self="close">
     <transition name="fade">
       <div class="modal" v-if="visible">
-        <h2 class="title">Sign in</h2>
+        <div class="tabs">
+          <button class="tab-btn" :class="{ active: !isRegister }" @click="isRegister = false">Sign in</button>
+          <button class="tab-btn" :class="{ active: isRegister }" @click="isRegister = true">Sign up</button>
+        </div>
 
-        <form @submit.prevent="login" class="stack">
+        <form @submit.prevent="submit" class="stack">
+          <div class="field" v-if="isRegister">
+            <label>Name</label>
+            <input v-model.trim="name" type="text" required placeholder="Your Name" />
+          </div>
+
           <div class="field">
             <label>Email</label>
             <input v-model.trim="email" type="email" required placeholder="example@mail.com" />
@@ -19,7 +27,7 @@
 
           <div class="row gap">
             <button class="btn" :disabled="loading">
-              {{ loading ? 'Loading...' : 'Login' }}
+              {{ loading ? 'Loading...' : (isRegister ? 'Register' : 'Login') }}
             </button>
             <button class="btn ghost" type="button" @click="close">Cancel</button>
           </div>
@@ -32,10 +40,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAuth } from '../stores/auth'
+import api from '../utils/api'
 
 const emit = defineEmits(['close'])
 const auth = useAuth()
 
+const isRegister = ref(false)
+const name = ref('')
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -47,14 +58,23 @@ function close() {
   setTimeout(() => emit('close'), 250) // animace
 }
 
-async function login() {
+async function submit() {
   error.value = ''
   loading.value = true
   try {
-    await auth.login(email.value, password.value)
+    if (isRegister.value) {
+      await api.post('/auth/register', {
+        name: name.value,
+        email: email.value,
+        password: password.value
+      })
+      await auth.login(email.value, password.value)
+    } else {
+      await auth.login(email.value, password.value)
+    }
     close()
   } catch (err) {
-    error.value = 'Wrong Email or Password'
+    error.value = err.response?.data?.message || 'Authentication failed'
   } finally {
     loading.value = false
   }
@@ -90,11 +110,25 @@ onMounted(() => {
   to { transform: scale(1); opacity: 1; }
 }
 
-.title {
-  margin-top: 0;
-  font-size: 1.4em;
-  text-align: center;
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #2c2c2e;
+}
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #888;
+  padding: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab-btn.active {
   color: #f0f0f0;
+  border-bottom-color: #d0813b;
 }
 
 .field {

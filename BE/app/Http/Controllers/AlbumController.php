@@ -13,7 +13,17 @@ class AlbumController extends Controller
         if ($req->boolean('public')) {
             return Album::with('coverPhoto')->where('visibility','public')->latest()->paginate(20);
         }
-        return Album::with('coverPhoto')->where('user_id', optional($req->user())->id)->latest()->paginate(20);
+        
+        $user = $req->user();
+        $sharedIds = $user->sharedAlbums()->pluck('albums.id');
+
+        return Album::with('coverPhoto')
+            ->where(function($q) use ($user, $sharedIds) {
+                $q->where('user_id', $user->id)
+                  ->orWhereIn('id', $sharedIds);
+            })
+            ->latest()
+            ->paginate(20);
     }
 
 
@@ -47,14 +57,20 @@ class AlbumController extends Controller
     }
 
     public function show(Request $req, Album $album) {
-        if ($album->user_id !== optional($req->user())->id && !in_array($album->visibility,['public','unlisted'])) {
+        $user = $req->user();
+        $canAccess = ($user && ($album->user_id === $user->id || $user->sharedAlbums()->where('albums.id', $album->id)->exists()));
+
+        if (!$canAccess && !in_array($album->visibility,['public','unlisted'])) {
             return response()->json(['message'=>'Forbidden'],403);
         }
-        return $album->load('photos');
+        $album->load('photos');
+        // Сортируем фото по description как по числу
+        $album->setRelation('photos', $album->photos->sortBy(fn($p) => (int)$p->description)->values());
+        return $album;
     }
 
     public function update(Request $req, Album $album) {
-        if ($album->user_id !== $req->user()->id) return response()->json(['message'=>'Forbidden'],403);
+        if (!$this->canEdit($req->user(), $album)) return response()->json(['message'=>'Forbidden'],403);
         $data = $req->validate([
             'name'=>'nullable|string|max:255',
             'description'=>'nullable|string|max:2000',
@@ -72,23 +88,42 @@ class AlbumController extends Controller
     }
 
     public function addPhoto(Request $req, Album $album) {
-        if ($album->user_id !== $req->user()->id) return response()->json(['message'=>'Forbidden'],403);
+        if (!$this->canEdit($req->user(), $album)) return response()->json(['message'=>'Forbidden'],403);
         $data = $req->validate(['photo_id'=>'required|integer|exists:photos,id']);
         $photo = Photo::where('id',$data['photo_id'])->where('user_id',$req->user()->id)->firstOrFail();
         $album->photos()->syncWithoutDetaching([$photo->id]);
         return $album->load('photos');
     }
+    public function addPhotos(Request $req, Album $album) {
+        if (!$this->canEdit($req->user(), $album)) return response()->json(['message'=>'Forbidden'],403);
+        $data = $req->validate(['photo_ids'=>'required|array', 'photo_ids.*'=>'integer|exists:photos,id']);
+        $photos = Photo::whereIn('id',$data['photo_ids'])->where('user_id',$req->user()->id)->pluck('id');
+        $album->photos()->syncWithoutDetaching($photos);
+        return $album->load('photos');
+    }
 
     public function removePhoto(Request $req, Album $album, Photo $photo) {
-        if ($album->user_id !== $req->user()->id || $photo->user_id !== $req->user()->id) return response()->json(['message'=>'Forbidden'],403);
+        if (!$this->canEdit($req->user(), $album)) return response()->json(['message'=>'Forbidden'],403);
+        
+        $removedOrder = intval($photo->description);
+        
         $album->photos()->detach($photo->id);
+        
+        $remainingPhotos = $album->photos()->get();
+        foreach ($remainingPhotos as $p) {
+            $val = intval($p->description);
+            if ($val > $removedOrder) {
+                $p->forceFill(['description' => (string)($val - 1)])->save();
+            }
+        }
+        
         return $album->load('photos');
     }
     
     public function setCover(Request $request, Album $album)
     {
         // Проверка прав
-        if ($album->user_id !== $request->user()->id) {
+        if (!$this->canEdit($request->user(), $album)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -125,7 +160,7 @@ class AlbumController extends Controller
 
     public function reorderPhotos(Request $request, Album $album)
     {
-        if ($album->user_id !== $request->user()->id) {
+        if (!$this->canEdit($request->user(), $album)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -134,14 +169,17 @@ class AlbumController extends Controller
             'photo_ids.*' => 'required|integer|exists:photos,id',
         ]);
 
-        $syncData = [];
         foreach ($validated['photo_ids'] as $index => $photoId) {
-            // Готовим данные для pivot-таблицы
-            $syncData[$photoId] = ['order_column' => $index];
+           // Обновляем description, используя индекс + 1
+           // Разрешаем менять description у фото, если оно находится в этом альбоме
+            $album->photos()->where('photos.id', $photoId)
+                ->update(['description' => (string)($index + 1)]);
         }
 
-        $album->photos()->sync($syncData);
-
         return response()->json(['message' => 'Photos reordered successfully']);
+    }
+
+    private function canEdit($user, $album) {
+        return $album->user_id === $user->id || $user->sharedAlbums()->where('albums.id', $album->id)->exists();
     }
 }

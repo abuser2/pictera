@@ -101,7 +101,7 @@ class ShareController extends Controller
             $albumData = [
                 'id' => $item->id,
                 'user_id' => $item->user_id,
-                'title' => $item->title ?? null,
+                'name' => $item->name,
                 'description' => $item->description ?? null,
                 'visibility' => $item->visibility ?? null,
                 'created_at' => $item->created_at,
@@ -167,5 +167,28 @@ class ShareController extends Controller
         if ($share->user_id !== $req->user()->id) return response()->json(['message'=>'Forbidden'],403);
         $share->delete();
         return response()->json(['message'=>'revoked']);
+    }
+
+    public function import(Request $req, string $token) {
+        $share = Share::where('token', $token)->first();
+        if (!$share || !$share->isValid()) {
+            return response()->json(['message' => 'Link expired or not found'], 404);
+        }
+
+        $item = $share->shareable;
+
+        if ($item instanceof Album) {
+            // Если пользователь уже владелец
+            if ($item->user_id === $req->user()->id) {
+                return response()->json($item->load('photos'), 200);
+            }
+            
+            // Добавляем пользователя в список участников альбома (если еще нет)
+            $req->user()->sharedAlbums()->syncWithoutDetaching([$item->id]);
+
+            return response()->json($item->load('photos'), 200);
+        }
+
+        return response()->json(['message' => 'Import not supported for this item type'], 400);
     }
 }

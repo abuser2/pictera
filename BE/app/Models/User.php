@@ -27,6 +27,7 @@ class User extends Authenticatable
     ];
     public function posts()      { return $this->hasMany(Post::class); }
     public function albums()     { return $this->hasMany(Album::class); }
+    public function sharedAlbums() { return $this->belongsToMany(Album::class, 'album_user')->withTimestamps(); }
     public function bookingsAsPhotographer() { return $this->hasMany(Booking::class, 'photographer_id'); }
     public function bookingsAsClient()       { return $this->hasMany(Booking::class, 'client_id'); }
     /**

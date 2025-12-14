@@ -59,7 +59,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/albums/{album}',[AlbumController::class,'update']);
     Route::delete('/albums/{album}',[AlbumController::class,'destroy']);
     Route::post('/albums/{album}/add-photo',[AlbumController::class,'addPhoto']);
+    Route::post('/albums/{album}/add-photos',[AlbumController::class,'addPhotos']);
     Route::delete('/albums/{album}/remove-photo/{photo}',[AlbumController::class,'removePhoto']);
+    Route::post('/albums/{album}/reorder-photos', [AlbumController::class, 'reorderPhotos']);
     
     // управление пользователем
     Route::post('/user/avatar', [AuthController::class, 'updateAvatar']);
@@ -74,4 +76,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/shares',[ShareController::class,'create']);
     Route::delete('/shares',[ShareController::class,'revoke']);
+    Route::post('/share/{token}/import', [ShareController::class, 'import']);
 });

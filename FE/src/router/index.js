@@ -3,6 +3,7 @@ import AlbumsView from '../views/AlbumsView.vue'
 import AlbumDetail from '../views/AlbumDetail.vue'
 import ProfileView from '../views/ProfileView.vue'
 import HomeView from '../views/HomeView.vue'
+import SharedAlbum from '../views/SharedAlbum.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -10,6 +11,7 @@ const routes = [
   { path: '/profile', name: 'profile', component: ProfileView },
   { path: '/albums', name: 'albums', component: AlbumsView },
   { path: '/albums/:id', name: 'album', component: AlbumDetail, props: true },
+  { path: '/share/:token', name: 'shared-album', component: SharedAlbum},
 ]
 
 export default createRouter({ history: createWebHistory(), routes })
