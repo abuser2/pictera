@@ -36,17 +36,19 @@
           </div>
         </form>
       </div>
-
+      <button class="btn" @click="toggleFollow(user)" v-if="!isMe">
+        {{ user.is_following ? 'Unfollow' : 'Follow' }}
+      </button>
       <!-- Albums Section -->
       <div class="albums-section">
         <h3>Albums</h3>
 
-        <div class="visibility-filter">
+        <div class="visibility-filter" v-if="isMe">
           <label>Filter by visibility:</label>
           <select v-model="visibilityFilter">
             <option value="">All</option>
             <option value="public">Public</option>
-            <option value="private" v-if="isMe">Private</option>
+            <option value="private">Private</option>
           </select>
         </div>
 
@@ -181,6 +183,35 @@ watch(
   (newId) => loadProfile(newId),
   { immediate: true }
 )
+
+const following = ref(false)
+
+async function checkFollow() {
+  if (isMe.value) return
+  try {
+    const { data } = await api.get(`/users/${user.value.id}/is-following`)
+    following.value = data.following
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+async function toggleFollow(user) {
+  try {
+    if (user.is_following) {
+      await api.delete(`/users/${user.id}/unfollow`);
+      user.is_following = false;
+    } else {
+      await api.post(`/users/${user.id}/follow`);
+      user.is_following = true;
+    }
+  } catch (err) {
+    console.error('Failed to follow/unfollow:', err);
+  }
+}
+
+// After loading profile
+watch(() => user.value, checkFollow, { immediate: true })
 </script>
 
 <style scoped>
