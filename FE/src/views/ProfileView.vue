@@ -81,7 +81,28 @@
             v-for="album in filteredAlbums"
             :key="album.id"
             :album="album"
+            :isMe="isMe"
           />
+        </div>
+      </div>
+      <div class="following-list">
+        <h3>Following</h3>
+
+        <div v-if="followingUsers.length" class="users-grid">
+          <div
+            v-for="user in followingUsers"
+            :key="user.id"
+            class="card user-card"
+            @click="goToUser(user.id)"
+            style="cursor:pointer;"
+          >
+            <strong>{{ user.name || 'Unknown' }}</strong>
+            <div v-if="user.email"><small>{{ user.email }}</small></div>
+          </div>
+        </div>
+
+        <div v-else>
+          <p>You're not following anyone yet.</p>
         </div>
       </div>
     </div>
@@ -128,6 +149,19 @@ function startEdit() {
   isEditing.value = true
 }
 
+const followingUsers = ref([])
+
+async function loadFollowingUsers() {
+  if (!userId.value) return
+  try {
+    const { data } = await api.get(`/users/${userId.value}/following`)
+    followingUsers.value = data.data || []
+  } catch (err) {
+    console.error('Failed to load following users:', err)
+    followingUsers.value = []
+  }
+}
+
 function cancelEdit() { isEditing.value = false }
 
 async function saveProfile() {
@@ -159,21 +193,22 @@ async function confirmCreate() {
 }
 
 // Load user profile and albums
-async function loadProfile(userId) {
+async function loadProfile(id) {
   loading.value = true
 
   if (!auth.me) await auth.fetchMe()
 
-  if (!userId || Number(userId) === auth.me.id) {
+  if (!id || Number(id) === auth.me.id) {
     user.value = auth.me
   } else {
-    const { data } = await api.get(`/users/${userId}`)
+    const { data } = await api.get(`/users/${id}`)
     user.value = data
   }
 
-  // Fetch albums (own or all)
-  await albumsStore.fetchAll()
+  userId.value = user.value.id   // ← set userId for following list
+  await loadFollowingUsers()      // ← actually load following users
 
+  await albumsStore.fetchAll()
   loading.value = false
 }
 
