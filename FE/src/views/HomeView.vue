@@ -32,7 +32,13 @@
           </router-link>
 
           <span class="date-text">{{ formatDate(post.created_at) }}</span>
-          <button class="btn small edit" @click="editingPost = post">✎</button>
+          <button
+            v-if="post.user?.id === currentUserId"
+            class="btn small edit"
+            @click="editingPost = post"
+          >
+            ✎
+          </button>
         </div>
 
         <!-- Photos grid -->
@@ -62,12 +68,12 @@
 
     <!-- Edit a post -->
     <EditPostModal
-    v-if="editingPost"
-    :post="editingPost"
-    @close="editingPost = null"
-    @updated="reloadPosts"
-    @deleted="reloadPosts"
-  />
+      v-if="editingPost"
+      :post="editingPost"
+      @close="editingPost = null"
+      @updated="() => { editingPost = null; reloadPosts() }"
+      @deleted="() => { editingPost = null; reloadPosts() }"
+    />
   </div>
 </template>
 
@@ -75,10 +81,18 @@
 import { ref, onMounted } from "vue";
 import api from "../utils/api";
 import CreatePostModal from "../components/CreatePostModal.vue";
+import EditPostModal from '../components/EditPostModal.vue'
 
 const posts = ref([]);
 const showCreate = ref(false);
 const editingPost = ref(null);
+const currentUserId = ref(null)
+
+// load current user
+async function loadMe() {
+  const { data } = await api.get('/me')
+  currentUserId.value = data.id
+}
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
@@ -88,6 +102,11 @@ function formatDate(dateStr) {
     month: "short",
     year: "numeric",
   });
+}
+
+// edit user´s post
+function editPost(post) {
+  editingPost.value = post
 }
 
 // reload posts feed
@@ -100,7 +119,10 @@ async function reloadPosts() {
   }
 }
 
-onMounted(reloadPosts);
+onMounted(async () => {
+  await loadMe()
+  await reloadPosts()
+})
 </script>
 
 <style scoped>
