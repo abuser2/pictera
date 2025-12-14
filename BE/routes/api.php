@@ -42,6 +42,7 @@ Route::get('/share/{token}', [ShareController::class,'open']);
 
 // public user profiles
 Route::get('/users/{id}', [UserController::class, 'show']);
+Route::get('/users', [UserController::class, 'index']);
 
 // Комментарии (публичный просмотр)
 Route::get('/comments/{global_id}', [CommentController::class, 'index']);

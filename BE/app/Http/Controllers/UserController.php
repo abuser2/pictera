@@ -7,6 +7,13 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
+
+    public function index()
+    {
+        $users = User::all(); // or with pagination
+        return response()->json($users);
+    }
+
     public function show(Request $request, $id)
     {
         $user = User::findOrFail($id);

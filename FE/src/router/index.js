@@ -9,6 +9,7 @@ const routes = [
   { path: '/', redirect: '/home' },
   { path: '/home', name: 'home', component: HomeView },
   { path: '/profile', name: 'profile', component: ProfileView },
+  { path: '/users/:id', name: 'user', component: ProfileView},
   { path: '/albums', name: 'albums', component: AlbumsView },
   { path: '/albums/:id', name: 'album', component: AlbumDetail, props: true },
   { path: '/shares', name: 'shares', component: AlbumsView },

@@ -12,6 +12,7 @@
           <p><strong>Email:</strong> {{ user.email || '—' }}</p>
 
           <div class="actions">
+            <!-- Only show edit if it's your profile -->
             <button v-if="isMe" class="btn primary" @click="startEdit">Edit</button>
           </div>
         </div>
@@ -45,7 +46,7 @@
           <select v-model="visibilityFilter">
             <option value="">All</option>
             <option value="public">Public</option>
-            <option value="private">Private</option>
+            <option value="private" v-if="isMe">Private</option>
           </select>
         </div>
 
@@ -55,7 +56,7 @@
         </div>
 
         <div class="albums-list">
-          <!-- Inline Create Album -->
+          <!-- Inline Create Album, only for own profile -->
           <div v-if="creating && isMe" class="album-card create-card">
             <input
               v-model="newAlbumName"
@@ -70,6 +71,7 @@
             </div>
           </div>
 
+          <!-- Create button, only for own profile -->
           <button v-if="!creating && isMe" class="btn" @click="startCreate">New Album</button>
 
           <!-- Album Cards -->
@@ -85,16 +87,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuth } from '../stores/auth'
 import { useProfileAlbumsStore } from '../stores/profileAlbums'
 import ProfileAlbumCard from '../components/ProfileAlbumCard.vue'
+import api from '../utils/api'
 
 const auth = useAuth()
 const albumsStore = useProfileAlbumsStore()
 const route = useRoute()
 
+// Profile data
 const user = ref(null)
 const isEditing = ref(false)
 const isSaving = ref(false)
@@ -109,10 +113,12 @@ const loading = ref(true)
 
 const filteredAlbums = computed(() => {
   if (!user.value || !albumsStore.albums.length) return []
-  return albumsStore.visibleAlbums(user.value.id, visibilityFilter.value || null)
+  // Only show public albums if it's another user's profile
+  const visibility = isMe.value ? visibilityFilter.value || null : 'public'
+  return albumsStore.visibleAlbums(user.value.id, visibility)
 })
 
-// Profile edit
+// Edit profile
 function startEdit() {
   if (!isMe.value) return
   form.name = user.value.name || ''
@@ -150,7 +156,7 @@ async function confirmCreate() {
   creating.value = false
 }
 
-// Load profile + albums
+// Load user profile and albums
 async function loadProfile(userId) {
   loading.value = true
 
@@ -159,14 +165,12 @@ async function loadProfile(userId) {
   if (!userId || Number(userId) === auth.me.id) {
     user.value = auth.me
   } else {
-    const { data: userData } = await api.get(`/users/${userId}`)
-    user.value = userData
+    const { data } = await api.get(`/users/${userId}`)
+    user.value = data
   }
 
-  // Load albums for this user
-  if (!albumsStore.albums.length || isMe.value) {
-    await albumsStore.fetchAll()
-  }
+  // Fetch albums (own or all)
+  await albumsStore.fetchAll()
 
   loading.value = false
 }
@@ -174,13 +178,10 @@ async function loadProfile(userId) {
 // Watch route change
 watch(
   () => route.params.id,
-  (newId) => {
-    loadProfile(newId)
-  },
-  { immediate: true } // run once on mount
+  (newId) => loadProfile(newId),
+  { immediate: true }
 )
 </script>
-
 
 <style scoped>
 .profile { max-width: 1200px; margin: 24px auto; padding: 12px; color: #fff; }
@@ -188,7 +189,6 @@ watch(
 .form-group label { display: block; margin-bottom: 4px; }
 .form-group input { width: 100%; padding: 8px; border-radius: 4px; }
 .btn.primary { background: #42b983; color: #fff; border: none; padding: 8px 16px; cursor: pointer; }
-
 .albums-list { display: flex; flex-direction: column; gap: 1rem; }
 .create-card { width: 100%; }
 .profile-album-card { width: 100%; }

@@ -20,7 +20,7 @@
         <div class="post-header">
           <div class="poster-info">
             <router-link
-              :to="{ name: 'profile', params: { id: post.user?.id } }"
+              :to="`/users/${post.user?.id}`"
               class="poster-link"
             >
               <strong>{{ post.user?.name || 'Unknown User' }}</strong>
@@ -61,7 +61,8 @@
       @close="showCreate = false"
       @created="reloadPosts"
     />
-  </div>
+  
+</div>
 </template>
 
 <script setup>
@@ -99,19 +100,30 @@ async function reloadPosts() {
   }
 }
 
-onMounted(async () => {
-  await fetchCurrentUser()
-  await reloadPosts()
-})
+const users = ref([])
+
+function goToUser(userId) {
+  if (!userId) return
+  router.push(`/users/${userId}`) // simple path string works
+}
 
 async function fetchCurrentUser() {
   try {
-    const { data } = await api.get('/me')
+    const { data } = await api.get('/auth/me')
     currentUserId.value = data.id
   } catch (err) {
     console.error('Failed to load current user:', err)
   }
 }
+
+onMounted(fetchCurrentUser)
+
+onMounted(async () => {
+  await fetchCurrentUser()
+  await reloadPosts()
+  await loadUsers()
+})
+
 
 function editPost(post) {
   console.log('Editing post:', post)
