@@ -30,6 +30,9 @@ class User extends Authenticatable
     public function sharedAlbums() { return $this->belongsToMany(Album::class, 'album_user')->withTimestamps(); }
     public function bookingsAsPhotographer() { return $this->hasMany(Booking::class, 'photographer_id'); }
     public function bookingsAsClient()       { return $this->hasMany(Booking::class, 'client_id'); }
+    public function followers() { return $this->belongsToMany(User::class, 'followers', 'following_id', 'follower_id')->withTimestamps(); }
+    public function following() { return $this->belongsToMany(User::class, 'followers', 'follower_id', 'following_id')->withTimestamps(); }
+    
     /**
      * The attributes that should be hidden for serialization.
      *

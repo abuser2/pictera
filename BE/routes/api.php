@@ -7,6 +7,7 @@ use App\Http\Controllers\AlbumController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 // Авторизация
 
@@ -35,6 +36,9 @@ Route::get('/public/posts',[PostController::class,'index']);     // ?public=1
 
 // Приватные ссылки
 Route::get('/share/{token}', [ShareController::class,'open']);
+
+// public user profiles
+Route::get('/users/{id}', [UserController::class, 'show']);
 
 
 // Авторизованные
@@ -78,4 +82,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/shares',[ShareController::class,'create']);
     Route::delete('/shares',[ShareController::class,'revoke']);
     Route::post('/share/{token}/import', [ShareController::class, 'import']);
+
+    // Подписки
+    Route::post('/users/{id}/follow', [UserController::class, 'follow']);
+    Route::delete('/users/{id}/follow', [UserController::class, 'unfollow']);
 });

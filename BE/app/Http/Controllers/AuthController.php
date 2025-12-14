@@ -32,10 +32,10 @@ class AuthController extends Controller
     {
         $user = $req->user();
 
-        // удалить все токены (санкнум)
+        // odstranit tokeny sanctum
         $user->tokens()->delete();
 
-        // при необходимости удалить связанные сущности вручную или использовать cascade/soft deletes
+        //  cascade/soft deletes
         $user->delete();
 
         return response()->json(['message' => 'Account deleted'], 200);
@@ -51,8 +51,6 @@ class AuthController extends Controller
             'is_photographer' => 'sometimes|boolean',
         ]);
 
-        // Метод fill() использует $fillable из модели и автоматически обработает 'password' и 'is_photographer'
-        // благодаря настройкам 'casts' в модели User.
         $user->fill($data);
         $user->save();
 
