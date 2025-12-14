@@ -28,11 +28,24 @@
           </router-link>
         </div>
 
+        <router-link to="/shares">Shared Albums</router-link>
+        
+        <div v-if="isSharesRoute && sharedAlbums.length" class="sub-menu">
+          <router-link 
+            v-for="a in sharedAlbums" 
+            :key="a.id" 
+            :to="`/shares/${a.id}`"
+            class="sub-link"
+          >
+            {{ a.name }}
+          </router-link>
+        </div>
+
         <router-link to="/bookings">Bookings</router-link>
 
       </aside>
       <main class="content">
-        <router-view @open-login="openLogin" />
+        <router-view />
       </main>
     </div>
 
@@ -41,7 +54,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed, watch } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuth } from './stores/auth'
 import api from './utils/api'
@@ -51,25 +64,41 @@ const auth = useAuth()
 const route = useRoute()
 const showLogin = ref(false)
 const albums = ref([])
+const sharedAlbums = ref([])
 
 function openLogin(){ showLogin.value = true }
 
 const isAlbumsRoute = computed(() => route.path.startsWith('/albums'))
+const isSharesRoute = computed(() => route.path.startsWith('/shares'))
 
-watch([isAlbumsRoute, () => auth.me], async ([isAlbums, me]) => {
-  if (isAlbums && me) {
+async function refreshSidebar() {
+  if (!auth.me) return
+  
+  if (isAlbumsRoute.value) {
     try {
-      const { data } = await api.get('/albums')
+      const { data } = await api.get('/albums?type=owned')
       albums.value = data?.data || data
+    } catch (e) { console.error(e) }
+  } else if (isSharesRoute.value) {
+    try {
+      const { data } = await api.get('/albums?type=shared')
+      sharedAlbums.value = data?.data || data
     } catch (e) {
       console.error(e)
     }
   }
-}, { immediate: true })
+}
+
+watch([isAlbumsRoute, isSharesRoute, () => auth.me], refreshSidebar, { immediate: true })
 
 onMounted(() => {
   auth.fetchMe().catch(()=>{})
   window.addEventListener('need-login', () => showLogin.value = true)
+  window.addEventListener('albums-updated', refreshSidebar)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('albums-updated', refreshSidebar)
 })
 </script>
 

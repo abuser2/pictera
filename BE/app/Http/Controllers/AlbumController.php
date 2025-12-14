@@ -15,15 +15,29 @@ class AlbumController extends Controller
         }
         
         $user = $req->user();
-        $sharedIds = $user->sharedAlbums()->pluck('albums.id');
+        $type = $req->query('type');
 
-        return Album::with('coverPhoto')
-            ->where(function($q) use ($user, $sharedIds) {
+        $query = Album::with('coverPhoto');
+
+        if ($type === 'owned') {
+            $query->where('user_id', $user->id);
+        } elseif ($type === 'shared') {
+            $sharedIds = $user->sharedAlbums()->pluck('albums.id');
+            $query->where(function($q) use ($user, $sharedIds) {
+                $q->whereIn('id', $sharedIds)
+                  ->orWhere(function($q2) use ($user) {
+                      $q2->where('user_id', $user->id)->has('shares');
+                  });
+            });
+        } else {
+            $sharedIds = $user->sharedAlbums()->pluck('albums.id');
+            $query->where(function($q) use ($user, $sharedIds) {
                 $q->where('user_id', $user->id)
                   ->orWhereIn('id', $sharedIds);
-            })
-            ->latest()
-            ->paginate(20);
+            });
+                }
+
+        return $query->latest()->paginate(20);
     }
 
 
@@ -51,8 +65,12 @@ class AlbumController extends Controller
             'name'=>$data['name'],
             'description'=>$data['description'] ?? null,
             'visibility'=>$data['visibility'] ?? 'private',
-            'cover_photo_id' => $coverPhotoId,
         ]);
+        if ($coverPhotoId) {
+            $album->cover_photo_id = $coverPhotoId;
+            $album->save();
+        }
+
         return response()->json($album, 201);
     }
 

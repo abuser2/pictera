@@ -11,6 +11,8 @@ const routes = [
   { path: '/profile', name: 'profile', component: ProfileView },
   { path: '/albums', name: 'albums', component: AlbumsView },
   { path: '/albums/:id', name: 'album', component: AlbumDetail, props: true },
+  { path: '/shares', name: 'shares', component: AlbumsView },
+  { path: '/shares/:id', name: 'share-detail', component: AlbumDetail, props: true },
   { path: '/share/:token', name: 'shared-album', component: SharedAlbum},
 ]
 

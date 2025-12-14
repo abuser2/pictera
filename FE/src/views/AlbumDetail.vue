@@ -1,15 +1,28 @@
 <template>
-  <div class="stack">
+  <div 
+    class="stack" 
+    @dragenter.prevent="onPageDragEnter" 
+    @dragover.prevent 
+    @dragleave.prevent="onPageDragLeave" 
+    @drop.prevent="onPageDrop"
+  >
     <div class="row space">
       <h2>{{ album?.name || 'Album' }}</h2>
       <div class="row gap">
         <input type="range" v-model="photoWidth" min="120" max="600" title="Zoom" />
         
+        <button class="btn ghost" :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">Grid</button>
+        <button class="btn ghost" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">Table</button>
         <button class="btn ghost" @click="showShareModal = true">Share</button>
         <button class="btn ghost" @click="toggleSelectionMode" :class="{ active: isSelecting }">
           {{ isSelecting ? 'Cancel' : 'Select' }}
         </button>
+        <button v-if="!isSelecting && photos.length > 0" class="btn ghost" @click="downloadAll">Download All</button>
+        <button v-if="isSelecting && selectedIds.size > 0" class="btn ghost" @click="downloadSelected">Download</button>
         <button v-if="isSelecting && selectedIds.size > 0" class="btn" @click="createAlbumFromSelection">Create Album</button>
+
+        <!-- Кнопка добавления фото (видна только если есть фото) -->
+        <button v-if="photos.length > 0" class="btn" @click="triggerUpload">Add Photo</button>
 
         <template v-if="isEditing">
           <input v-model="editTitle" class="input short" placeholder="Rename album"/>
@@ -19,29 +32,74 @@
       </div>
     </div>
 
-    <UploadDropzone @selected="uploadPhoto" />
-    <div class="grid photos" :style="{ columnWidth: photoWidth + 'px' }">
-      <div 
-        v-for="(p, index) in photos" 
-        :key="p.id" 
-        class="photo"
-        :class="{ 'dragging': draggedPhotoId === p.id, 'selected': selectedIds.has(p.id) }"
-        :draggable="!isSelecting"
-        @dragstart="onDragStart(index, $event)"
-        @dragend="onDragEnd"
-        @drop="onDrop(index)"
-        @dragover.prevent
-        @dragenter.prevent
-        @click="onPhotoClick(p, index)"
-      >
-        <img :src="resolvePhotoUrl(p)" alt="photo" @load="setRatio" />
-        <div v-if="isEditing" class="row space tiny">
-          <span class="cut">{{ p.title || p.original_name }}</span>
-          <button class="btn-remove" @click="removeFromAlbum(p.id)">Remove</button>
+    <!-- Скрытый инпут для кнопки Add Photo -->
+    <input ref="fileInput" type="file" multiple accept="image/*" style="display:none" @change="onFileInputChange">
+
+    <!-- Состояние пустого альбома -->
+    <div v-if="photos.length === 0 && !loading" class="empty-state">
+      <UploadDropzone @selected="uploadPhoto" class="centered-dropzone" />
+    </div>
+
+    <!-- Список фотографий -->
+    <template v-else>
+      <div v-if="viewMode === 'grid'" class="grid photos" :style="{ columnWidth: photoWidth + 'px' }">
+        <div 
+          v-for="(p, index) in photos" 
+          :key="p.id" 
+          class="photo"
+          :class="{ 'dragging': draggedPhotoId === p.id, 'selected': selectedIds.has(p.id) }"
+          :draggable="!isSelecting"
+          @dragstart="onDragStart(index, $event)"
+          @dragend="onDragEnd"
+          @drop="onDrop(index)"
+          @dragover.prevent
+          @dragenter.prevent="onDragEnter(index)"
+          @click="onPhotoClick(p, index)"
+        >
+          <img :src="resolvePhotoUrl(p)" alt="photo" @load="setRatio" />
+          <div v-if="isEditing" class="row space tiny">
+            <span class="cut">{{ p.title || p.original_name }}</span>
+            <button class="btn-remove" @click="removeFromAlbum(p.id)">Remove</button>
+          </div>
         </div>
+      </div>
+      
+      <div v-else class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Preview</th>
+              <th>Name</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(p, index) in photos" :key="p.id">
+              <td style="width: 80px;">
+                <img :src="resolvePhotoUrl(p)" class="table-thumb" @click="openLightbox(index)" />
+              </td>
+              <td>{{ p.title || p.original_name }}</td>
+              <td>{{ new Date(p.created_at).toLocaleDateString() }}</td>
+              <td>
+                <button class="btn-download" @click="downloadSingle(p)">Download</button>
+                <button class="btn-remove" @click="removeFromAlbum(p.id)">Remove</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- Оверлей для Drag-and-Drop файлов -->
+    <div v-if="isPageDragging" class="drag-overlay">
+      <div class="drag-content">
+        <span class="icon">☁️</span>
+        <h3>Drop photos here to upload</h3>
       </div>
     </div>
 
+    <!-- Lightbox -->
     <div v-if="lightboxIndex !== -1" class="lightbox" @click.self="closeLightbox">
       <button class="lb-nav left" @click.stop="prevPhoto">❮</button>
       <img :src="resolvePhotoUrl(photos[lightboxIndex])" class="lb-image" />
@@ -126,46 +184,62 @@ const showCreateModal = ref(false)
 const showShareModal = ref(false)
 const shareUrl = ref('')
 const newAlbumName = ref('')
+const viewMode = ref('grid')
+const loading = ref(true)
+
+// Drag & Drop Page State
+const isPageDragging = ref(false)
+const dragCounter = ref(0)
+const fileInput = ref(null)
 
 function resolvePhotoUrl(p){
-  return p.url || (p.path ? `/storage/${p.path}` : '')
+  return p.url || (p.path ? `/~xkaval05/laravel/storage/${p.path}` : '')
 }
 
 async function load(){
-  // GET /api/albums/:id  :contentReference[oaicite:9]{index=9}
-  const { data } = await api.get(`/albums/${route.params.id}`)
-  album.value = data
-  editTitle.value = data.name
-  photos.value = data.photos || data?.data?.photos || []
-  thumbRefs.value = []
-}
-
-async function rename(){
-  await api.patch(`/albums/${route.params.id}`, { name: editTitle.value }) // :contentReference[oaicite:9]{index=9}
-  await load()
-}
-
-async function uploadPhoto(file){
-  pendingUploads.value++
-  const nextOrder = photos.value.length + pendingUploads.value
+  loading.value = true
   try {
-    // 1) Upload photo: POST /api/photos
-    const fd = new FormData()
-    fd.append('photo', file)
-    fd.append('title', file.name)
-    fd.append('description', String(nextOrder))
-    const { data: created } = await api.post('/photos', fd, { headers: { 'Content-Type': 'multipart/form-data' }})
-    const photoId = created.id || created?.data?.id
-    // 2) Add to album: POST /api/albums/:id/add-photo
-    await api.post(`/albums/${route.params.id}/add-photo`, { photo_id: photoId })
-    await load()
+    const { data } = await api.get(`/albums/${route.params.id}`)
+    album.value = data
+    editTitle.value = data.name
+    photos.value = data.photos || data?.data?.photos || []
+    thumbRefs.value = []
+  } catch(e) {
+    console.error(e)
   } finally {
-    pendingUploads.value--
+    loading.value = false
   }
 }
 
+async function rename(){
+  await api.patch(`/albums/${route.params.id}`, { name: editTitle.value })
+  await load()
+}
+
+async function uploadPhoto(input){
+  const files = (input instanceof FileList || Array.isArray(input)) ? Array.from(input) : [input]
+
+  files.forEach(async (file) => {
+    pendingUploads.value++
+    const nextOrder = photos.value.length + pendingUploads.value
+    try {
+      const fd = new FormData()
+      fd.append('photo', file)
+      fd.append('title', file.name)
+      fd.append('description', String(nextOrder))
+      const { data: created } = await api.post('/photos', fd, { headers: { 'Content-Type': 'multipart/form-data' }})
+      const photoId = created.id || created?.data?.id
+      await api.post(`/albums/${route.params.id}/add-photo`, { photo_id: photoId })
+      await load()
+    } catch(e) {
+      console.error(e)
+    } finally {
+      pendingUploads.value--
+    }
+  })
+}
+
 async function removeFromAlbum(photoId){
-  // DELETE /api/albums/:id/remove-photo/:photoId  :contentReference[oaicite:12]{index=12}
   await api.delete(`/albums/${route.params.id}/remove-photo/${photoId}`)
   await load()
 }
@@ -173,7 +247,6 @@ async function removeFromAlbum(photoId){
 function setRatio(e) {
   const img = e.target
   const isPortrait = img.naturalHeight > img.naturalWidth
-  // 3/4, 4/3
   img.style.aspectRatio = isPortrait ? '3/4' : '4/3'
 }
 
@@ -224,33 +297,74 @@ function onKeydown(e) {
   if (e.key === 'ArrowLeft') prevPhoto()
 }
 
+// Reordering Drag & Drop
 function onDragStart(index, event) {
   draggedIndex.value = index
   event.dataTransfer.effectAllowed = 'move'
   event.dataTransfer.dropEffect = 'move'
-  // Скрываем оригинал с небольшой задержкой, чтобы браузер успел сделать "снимок" для перетаскивания
   setTimeout(() => {
     draggedPhotoId.value = photos.value[index].id
   }, 0)
 }
 
-async function onDrop(index) {
-  const from = draggedIndex.value
-  const to = index
-  if (from === null || from === to) return
+function onDragEnter(index) {
+  if (draggedIndex.value !== null && draggedIndex.value !== index) {
+    const item = photos.value[draggedIndex.value]
+    photos.value.splice(draggedIndex.value, 1)
+    photos.value.splice(index, 0, item)
+    draggedIndex.value = index
+  }
+}
 
-  const item = photos.value[from]
-  photos.value.splice(from, 1)
-  photos.value.splice(to, 0, item)
-  //draggedIndex.value = null
-
+async function onDragEnd() {
+  draggedIndex.value = null
+  draggedPhotoId.value = null
   const ids = photos.value.map(p => p.id)
   await api.post(`/albums/${route.params.id}/reorder-photos`, { photo_ids: ids })
 }
 
-  function onDragEnd() {
-  draggedIndex.value = null
-  draggedPhotoId.value = null
+function onDrop(index) {
+  // Placeholder for drop event if needed
+}
+
+// Page Drag & Drop (Upload)
+function onPageDragEnter(e) {
+  if (draggedIndex.value !== null) return // Игнорируем, если это сортировка фото
+  if (e.dataTransfer.types.includes('Files')) {
+    dragCounter.value++
+    isPageDragging.value = true
+  }
+}
+
+function onPageDragLeave(e) {
+  if (draggedIndex.value !== null) return
+  if (e.dataTransfer.types.includes('Files')) {
+    dragCounter.value--
+    if (dragCounter.value <= 0) {
+      isPageDragging.value = false
+      dragCounter.value = 0
+    }
+  }
+}
+
+function onPageDrop(e) {
+  if (draggedIndex.value !== null) return
+  isPageDragging.value = false
+  dragCounter.value = 0
+  if (e.dataTransfer.files.length) {
+    uploadPhoto(e.dataTransfer.files)
+  }
+}
+
+function triggerUpload() {
+  fileInput.value.click()
+}
+
+function onFileInputChange(e) {
+  if (e.target.files.length) {
+    uploadPhoto(e.target.files)
+  }
+  e.target.value = ''
 }
 
 function createAlbumFromSelection() {
@@ -270,6 +384,39 @@ async function confirmCreateAlbum() {
   } catch (e) {
     alert('Error creating album')
   }
+}
+
+async function downloadPhotos(items) {
+  for (const p of items) {
+    try {
+      const response = await api.get(`/photos/${p.id}/download`, { responseType: 'blob' })
+      const blob = response.data
+      const blobUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = p.title || p.original_name || `photo-${p.id}.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(blobUrl)
+    } catch (e) {
+      console.error('Download failed', e)
+    }
+    await new Promise(r => setTimeout(r, 500))
+  }
+}
+
+function downloadAll() {
+  downloadPhotos(photos.value)
+}
+
+function downloadSelected() {
+  const selected = photos.value.filter(p => selectedIds.has(p.id))
+  downloadPhotos(selected)
+}
+
+function downloadSingle(p) {
+  downloadPhotos([p])
 }
 
 async function generateShareLink() {
@@ -315,7 +462,7 @@ watch(showShareModal, (val) => {
 </script>
 
 <style scoped>
-.stack { display: flex; flex-direction: column; gap: 24px; padding: 24px; max-width: 100%; margin: 0; box-sizing: border-box; }
+.stack { display: flex; flex-direction: column; gap: 24px; padding: 24px; max-width: 100%; margin: 0; box-sizing: border-box; min-height: 100vh; }
 .row { display: flex; align-items: center; }
 .space { justify-content: space-between; }
 .gap { gap: 12px; }
@@ -348,6 +495,44 @@ h2 { font-size: 1.8rem; color: #fff; margin: 0; }
 }
 .btn.ghost:hover { background: #f3f4f6; }
 .btn.ghost.active { background: #d0813b; color: #fff; border-color: #d0813b; }
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  min-height: 400px;
+}
+.centered-dropzone {
+  width: 100%;
+  max-width: 600px;
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Drag Overlay */
+.drag-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 28, 30, 0.95);
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 4px dashed #d0813b;
+  margin: 20px;
+  border-radius: 20px;
+  pointer-events: none; /* Чтобы события drop проходили сквозь него */
+}
+.drag-content {
+  text-align: center;
+  color: #f0f0f0;
+}
+.drag-content .icon { font-size: 4rem; display: block; margin-bottom: 20px; }
+.drag-content h3 { font-size: 2rem; margin: 0; }
 
 /* Grid */
 .grid.photos {
@@ -411,6 +596,21 @@ h2 { font-size: 1.8rem; color: #fff; margin: 0; }
   max-width: 140px;
 }
 
+.btn-download {
+  background: transparent;
+  color: #d0813b;
+  border: 1px solid #d0813b;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 8px;
+}
+.btn-download:hover {
+  background: #d0813b;
+  color: #fff;
+}
 .btn-remove {
   background: transparent;
   color: #ef4444;
@@ -514,4 +714,11 @@ h2 { font-size: 1.8rem; color: #fff; margin: 0; }
 .field input { background:#2a2a2d; border:1px solid #3a3a3d; border-radius:8px; padding:8px; color:#fff; }
 .fade-enter-active,.fade-leave-active{ transition:opacity .2s ease; }
 .fade-enter-from,.fade-leave-to{ opacity:0; }
+
+.table-container { overflow-x: auto; width: 100%; }
+.data-table { width: 100%; border-collapse: collapse; color: #ddd; }
+.data-table th, .data-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+.data-table th { background: #222; color: #fff; }
+.table-thumb { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; }
+.table-thumb:hover { opacity: 0.8; }
 </style>

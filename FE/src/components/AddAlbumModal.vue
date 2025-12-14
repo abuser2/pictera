@@ -11,8 +11,8 @@
           </div>
 
           <div class="field">
-            <label>Popis (nepovinne)</label>
-            <textarea v-model.trim="description" rows="3" placeholder="Kratky popis"></textarea>
+            <label>Cover Photo</label>
+            <input type="file" @change="onFileChange" accept="image/*" />
           </div>
 
           <p v-if="error" class="error">{{ error }}</p>
@@ -37,9 +37,13 @@ const emit = defineEmits(['close','created'])
 
 const visible = ref(false)
 const title = ref('')
-const description = ref('')
 const loading = ref(false)
 const error = ref('')
+const coverFile = ref(null)
+
+function onFileChange(e) {
+  coverFile.value = e.target.files[0] || null
+}
 
 function close() {
   visible.value = false
@@ -52,7 +56,12 @@ async function submit() {
   loading.value = true
   try {
     // POST /api/albums { title, description? }
-    await api.post('/albums', { name: title.value, description: description.value || undefined })
+    const fd = new FormData()
+    fd.append('name', title.value)
+    if (coverFile.value) {
+      fd.append('cover_file', coverFile.value)
+    }
+    await api.post('/albums', fd)
     emit('created')   // update album list in parent
     close()
   } catch (e) {

@@ -9,7 +9,7 @@
         <button v-if="auth.me" class="btn" @click="importAlbum">Add to my albums</button>
         <div v-else class="login-block">
           <p>Login to add this album</p>
-          <button class="btn" @click="$emit('open-login')">Login</button>
+          <button class="btn" @click="triggerLogin">Login</button>
         </div>
       </div>
     </div>
@@ -47,6 +47,10 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function triggerLogin() {
+  window.dispatchEvent(new Event('need-login'))
 }
 
 async function importAlbum() {

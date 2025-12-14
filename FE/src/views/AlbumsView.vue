@@ -1,12 +1,16 @@
 <template>
   <div class="stack">
     <div class="row space">
-      <h2>Albums</h2>
-      <button class="btn" @click="showCreate = true">New Album</button>
+      <h2>{{ isShares ? 'Shared Links' : 'Albums' }}</h2>
+      <div class="row gap">
+        <button class="btn ghost" :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">Grid</button>
+        <button class="btn ghost" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">Table</button>
+        <button v-if="!isShares" class="btn" @click="showCreate = true">New Album</button>
+      </div>
     </div>
 
     <div v-if="loading">Loading...</div>
-    <div v-else class="grid">
+    <div v-else-if="viewMode === 'grid'" class="grid">
       <AlbumCard
         v-for="a in albums"
         :key="a.id"
@@ -16,6 +20,31 @@
         @delete="deleteAlbum(a.id)"
         @setCover="promptCover"
       />
+    </div>
+    <div v-else class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Description / Link</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="a in albums" :key="a.id" @click="openAlbum(a.id)" class="clickable-row">
+            <td>{{ a.name }}</td>
+            <td class="desc-cell">{{ a.description }}</td>
+            <td>{{ new Date(a.created_at).toLocaleDateString() }}</td>
+            <td @click.stop>
+               <div class="row gap">
+                 <button class="btn small" @click="openRenameModal(a)">Rename</button>
+                 <button class="btn small danger" @click="deleteAlbum(a.id)">Delete</button>
+               </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <AddAlbumModal
@@ -50,13 +79,14 @@
 
 
 <script setup>
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref, computed, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import api from '../utils/api'
 import AlbumCard from '../components/AlbumCard.vue'
 import AddAlbumModal from '../components/AddAlbumModal.vue'
 
 const router = useRouter()
+const route = useRoute()
 const albums = ref([])
 const loading = ref(true)
 const showCreate = ref(false)
@@ -65,10 +95,14 @@ const albumForCover = ref(null)
 const showRename = ref(false)
 const renameName = ref('')
 const albumToRename = ref(null)
+const viewMode = ref('grid')
+
+const isShares = computed(() => route.path.startsWith('/shares'))
 
 async function load(){
   loading.value = true
-  const { data } = await api.get('/albums')
+  const type = isShares.value ? 'shared' : 'owned'
+  const { data } = await api.get(`/albums?type=${type}`)
   albums.value = data?.data || data
   loading.value = false
 }
@@ -84,7 +118,6 @@ async function confirmRename(){
   await api.patch(`/albums/${albumToRename.value.id}`, { name: renameName.value })
   showRename.value = false
   albumToRename.value = null
-  window.dispatchEvent(new Event('albums-updated'))
   await load()
 }
 async function deleteAlbum(id){
@@ -92,8 +125,18 @@ async function deleteAlbum(id){
   window.dispatchEvent(new Event('albums-updated'))
   await load()
 }
-function openAlbum(id){ router.push({ name: 'album', params: { id }}) }
-async function onCreated(){ showCreate.value = false; window.dispatchEvent(new Event('albums-updated')); await load() }
+function openAlbum(id){ 
+  if (isShares.value) {
+    router.push({ name: 'share-detail', params: { id }}) 
+  } else {
+    router.push({ name: 'album', params: { id }}) 
+  }
+}
+async function onCreated(){ 
+  showCreate.value = false
+  window.dispatchEvent(new Event('albums-updated'))
+  await load() 
+}
 
 function promptCover(album){
   albumForCover.value = album
@@ -126,6 +169,7 @@ async function uploadCover(event){
 
 
 onMounted(load)
+watch(() => route.path, load)
 </script>
 
 <style scoped>
@@ -140,6 +184,17 @@ onMounted(load)
 .gap { gap:8px; }
 .btn { background:#d0813b; color:#111; border:0; border-radius:10px; padding:8px 12px; cursor:pointer; font-weight: 600; }
 .btn.ghost { background:transparent; color:#ddd; border:1px solid #3a3a3a; }
+.btn.ghost.active { background: #d0813b; color: #fff; border-color: #d0813b; }
+.btn.small { padding: 4px 8px; font-size: 0.8rem; }
+.btn.danger { background: #ef4444; color: white; }
 .fade-enter-active,.fade-leave-active{ transition:opacity .2s ease; }
 .fade-enter-from,.fade-leave-to{ opacity:0; }
+
+.table-container { overflow-x: auto; width: 100%; }
+.data-table { width: 100%; border-collapse: collapse; color: #ddd; }
+.data-table th, .data-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+.data-table th { background: #222; color: #fff; }
+.clickable-row { cursor: pointer; transition: background 0.2s; }
+.clickable-row:hover { background: #2a2a2d; }
+.desc-cell { white-space: pre-wrap; max-width: 300px; font-size: 0.85rem; color: #aaa; }
 </style>

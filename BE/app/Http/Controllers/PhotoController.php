@@ -70,4 +70,10 @@ class PhotoController extends Controller
         $photo->delete();
         return response()->json(['message'=>'deleted']);
     }
+
+    public function download(Request $req, Photo $photo) {
+        // Проверяем права: владелец или публичное фото        
+        // Используем диск 'web', так как он используется при загрузке (store)
+        return Storage::disk('web')->download($photo->path, $photo->original_name);
+    }
 }

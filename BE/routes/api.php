@@ -40,6 +40,7 @@ Route::get('/share/{token}', [ShareController::class,'open']);
 // Авторизованные
 Route::middleware('auth:sanctum')->group(function () {
     // управление фото
+    Route::get('/photos/{photo}/download', [PhotoController::class, 'download']);
     Route::get('/photos',[PhotoController::class,'index']);
     Route::post('/photos',[PhotoController::class,'store']);
     Route::get('/photos/{photo}',[PhotoController::class,'show']);

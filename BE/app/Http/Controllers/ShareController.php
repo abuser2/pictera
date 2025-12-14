@@ -35,6 +35,12 @@ class ShareController extends Controller
 
         $item->shares()->save($share);
 
+        if ($item instanceof Album) {
+            $link = url("/share/{$share->token}"); // Ссылка для фронтенда (предполагаем, что роутинг настроен)
+            $item->description = $item->description ? $item->description . "\n" . $link : $link;
+            $item->save();
+        }
+
         return response()->json([
             'token' => $share->token,
             'url' => url("/api/share/{$share->token}"),
