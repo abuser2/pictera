@@ -3,14 +3,16 @@
     <h2>Profile</h2>
 
     <div v-if="!auth.me">Nejste v systému.</div>
+
     <div v-else>
       <!-- Profile Info -->
       <div class="profile-header">
         <div class="info-section" v-if="!isEditing">
-          <p><strong>Name:</strong> {{ auth.me.name || '—' }}</p>
-          <p><strong>Email:</strong> {{ auth.me.email || '—' }}</p>
+          <p><strong>Name:</strong> {{ user.name || '—' }}</p>
+          <p><strong>Email:</strong> {{ user.email || '—' }}</p>
+
           <div class="actions">
-            <button class="btn primary" @click="startEdit">Edit</button>
+            <button v-if="isMe" class="btn primary" @click="startEdit">Edit</button>
           </div>
         </div>
 
@@ -38,7 +40,6 @@
       <div class="albums-section">
         <h3>Albums</h3>
 
-        <!-- Filter Dropdown -->
         <div class="visibility-filter">
           <label>Filter by visibility:</label>
           <select v-model="visibilityFilter">
@@ -55,7 +56,7 @@
 
         <div class="albums-list">
           <!-- Inline Create Album -->
-          <div v-if="creating" class="album-card create-card">
+          <div v-if="creating && isMe" class="album-card create-card">
             <input
               v-model="newAlbumName"
               placeholder="Album name"
@@ -69,7 +70,7 @@
             </div>
           </div>
 
-          <button v-if="!creating" class="btn" @click="startCreate">New Album</button>
+          <button v-if="!creating && isMe" class="btn" @click="startCreate">New Album</button>
 
           <!-- Album Cards -->
           <ProfileAlbumCard
@@ -84,72 +85,102 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuth } from '../stores/auth'
 import { useProfileAlbumsStore } from '../stores/profileAlbums'
 import ProfileAlbumCard from '../components/ProfileAlbumCard.vue'
 
-// Stores
 const auth = useAuth()
 const albumsStore = useProfileAlbumsStore()
+const route = useRoute()
 
-// Profile Edit
+const user = ref(null)
 const isEditing = ref(false)
 const isSaving = ref(false)
+const isMe = computed(() => user.value?.id === auth.me?.id)
 const form = reactive({ name: '', email: '' })
 
-function startEdit() {
-  form.name = auth.me?.name || ''
-  form.email = auth.me?.email || ''
-  isEditing.value = true
-}
-
-function cancelEdit() { isEditing.value = false }
-
-async function saveProfile() {
-  if (isSaving.value) return
-  try {
-    isSaving.value = true
-    await auth.updateProfile({ name: form.name, email: form.email })
-    isEditing.value = false
-  } finally {
-    isSaving.value = false
-  }
-}
-
-// Album Management
+// Albums
 const creating = ref(false)
 const newAlbumName = ref('')
 const visibilityFilter = ref('')
 const loading = ref(true)
 
 const filteredAlbums = computed(() => {
-  if (!auth.me || !albumsStore.albums.length) return []
-  return albumsStore.visibleAlbums(auth.me.id, visibilityFilter.value || null)
+  if (!user.value || !albumsStore.albums.length) return []
+  return albumsStore.visibleAlbums(user.value.id, visibilityFilter.value || null)
 })
 
+// Profile edit
+function startEdit() {
+  if (!isMe.value) return
+  form.name = user.value.name || ''
+  form.email = user.value.email || ''
+  isEditing.value = true
+}
+
+function cancelEdit() { isEditing.value = false }
+
+async function saveProfile() {
+  if (!isMe.value || isSaving.value) return
+  try {
+    isSaving.value = true
+    await auth.updateProfile({ name: form.name, email: form.email })
+    user.value.name = form.name
+    user.value.email = form.email
+    isEditing.value = false
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// Album creation
 function startCreate() {
+  if (!isMe.value) return
   creating.value = true
   newAlbumName.value = ''
 }
 
-function cancelCreate() {
-  creating.value = false
-}
+function cancelCreate() { creating.value = false }
 
 async function confirmCreate() {
-  if (!newAlbumName.value.trim()) return
+  if (!isMe.value || !newAlbumName.value.trim()) return
   await albumsStore.create(newAlbumName.value)
   creating.value = false
 }
 
-// Fetch albums and user
-onMounted(async () => {
+// Load profile + albums
+async function loadProfile(userId) {
+  loading.value = true
+
   if (!auth.me) await auth.fetchMe()
-  if (!albumsStore.albums.length) await albumsStore.fetchAll()
+
+  if (!userId || Number(userId) === auth.me.id) {
+    user.value = auth.me
+  } else {
+    const { data: userData } = await api.get(`/users/${userId}`)
+    user.value = userData
+  }
+
+  // Load albums for this user
+  if (!albumsStore.albums.length || isMe.value) {
+    await albumsStore.fetchAll()
+  }
+
   loading.value = false
-})
+}
+
+// Watch route change
+watch(
+  () => route.params.id,
+  (newId) => {
+    loadProfile(newId)
+  },
+  { immediate: true } // run once on mount
+)
 </script>
+
 
 <style scoped>
 .profile { max-width: 1200px; margin: 24px auto; padding: 12px; color: #fff; }
@@ -158,24 +189,9 @@ onMounted(async () => {
 .form-group input { width: 100%; padding: 8px; border-radius: 4px; }
 .btn.primary { background: #42b983; color: #fff; border: none; padding: 8px 16px; cursor: pointer; }
 
-.albums-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem; /* space between albums */
-}
-
-.create-card {
-  width: 100%;
-}
-.profile-album-card {
-  width: 100%;
-}
-
-.visibility-filter {
-  margin: 16px 0;
-}
-select {
-  padding: 4px 8px;
-  border-radius: 4px;
-}
+.albums-list { display: flex; flex-direction: column; gap: 1rem; }
+.create-card { width: 100%; }
+.profile-album-card { width: 100%; }
+.visibility-filter { margin: 16px 0; }
+select { padding: 4px 8px; border-radius: 4px; }
 </style>
