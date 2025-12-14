@@ -1,225 +1,203 @@
+/**
+ * ITU 2025
+ *
+ * @author Laura Fojtíková (xfojtil00)
+ * @file CreatePostModal.vue
+ * @brief Component for creating posts
+ */
+
 <template>
-  <div class="modal-backdrop" @click.self="close">
-    <div class="modal">
-      <h2>Create New Post</h2>
+  <div class="modal">
+    <div class="modal-content">
 
-      <form @submit.prevent="submitPost" class="stack">
+      <h2>Create Post</h2>
 
-        <label>Description:</label>
-        <textarea v-model="description" placeholder="Write something..." />
+      <!-- Description -->
+      <label>Caption:</label>
+      <textarea v-model="caption" placeholder="Write a caption..." />
 
-        <label>Select photos:</label>
-        <div v-if="loadingAlbums">Loading albums...</div>
+      <!-- Visibility -->
+      <label>Visibility:</label>
+      <select v-model="visibility">
+        <option value="public">Public</option>
+        <option value="private">Private</option>
+      </select>
 
-        <div v-for="album in albums" :key="album.id" class="album">
-            <h4 @click="openAlbum(album.id)" class="album-title">
-                {{ album.name }}
-            </h4>
+      <!-- Photos -->
+      <label>Select photos:</label>
+      <div class="photos-box">
+        <p v-if="photos.length === 0" class="empty">
+          You have no uploaded photos yet.
+        </p>
 
-            <div v-if="openedAlbumId === album.id" class="photos">
-                <div v-if="album.loadingPhotos">Loading photos...</div>
-
-                <div v-else-if="album.photos?.length">
-                <img
-                    v-for="photo in album.photos"
-                    :key="photo.id"
-                    :src="photo.url"
-                    :class="{ selected: selectedPhotoIds.includes(photo.id) }"
-                    @click="togglePhoto(photo.id)"
-                />
-                </div>
-
-                <p v-else class="no-photos">No photos in this album.</p>
-            </div>
+        <div v-else class="photo-grid">
+          <div
+            v-for="p in photos"
+            :key="p.id"
+            class="photo-item"
+            :class="{ selected: selectedPhotos.includes(p.id) }"
+            @click="togglePhoto(p.id)"
+          >
+            <img :src="p.url" alt="" />
+          </div>
         </div>
+      </div>
 
+      <div class="actions">
+        <button class="btn cancel" @click="$emit('close')">Cancel</button>
+        <button class="btn create" @click="createPost">Create Post</button>
+      </div>
 
-        <div class="row space">
-          <button type="button" class="btn cancel" @click="close">Cancel</button>
-          <button type="submit" class="btn primary" :disabled="loading">
-            {{ loading ? 'Posting...' : 'Create Post' }}
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import api from '../utils/api'
+import { ref, onMounted } from "vue";
+import api from "../utils/api";
 
-const emit = defineEmits(['close', 'created'])
+const emit = defineEmits(["close", "created"]);
 
-const description = ref('')
-const albums = ref([])
-const selectedPhotoIds = ref([])
-const loading = ref(false)
-const loadingAlbums = ref(true)
-const openedAlbumId = ref(null)
+const caption = ref("");
+const visibility = ref("public");
+const photos = ref([]);
+const selectedPhotos = ref([]);
+const loading = ref(false);
 
+// load user's photos
+async function loadPhotos() {
+  try {
+    const { data } = await api.get("/photos");
+    photos.value = data.data || data;
+  } catch (err) {
+    console.error("Failed to load photos:", err);
+  }
+}
+
+// choose a photo
 function togglePhoto(id) {
-  const i = selectedPhotoIds.value.indexOf(id)
-  if (i >= 0) selectedPhotoIds.value.splice(i, 1)
-  else if (selectedPhotoIds.value.length < 4) selectedPhotoIds.value.push(id)
-}
-
-async function openAlbum(id) {
-  console.log('Album clicked:', id)
-
-  if (openedAlbumId.value === id) {
-    openedAlbumId.value = null
-    return
-  }
-
-  openedAlbumId.value = id
-  const album = albums.value.find(a => a.id === id)
-  if (!album) return
-
-  if (album.photos) return
-
-  album.loadingPhotos = true
-  console.log(`Fetching album ${id} photos...`)
-
-  try {
-    const { data } = await api.get(`/albums/${id}`)
-    console.log('Fetched album data:', data)
-
-    album.photos = data.photos || []
-  } catch (err) {
-    console.error(`Failed to load photos for album ${id}:`, err.response?.data || err.message)
-    album.photos = []
-  } finally {
-    album.loadingPhotos = false
+  if (selectedPhotos.value.includes(id)) {
+    selectedPhotos.value = selectedPhotos.value.filter(p => p !== id);
+  } else {
+    selectedPhotos.value.push(id);
   }
 }
 
-
-async function loadAlbums() {
-  loadingAlbums.value = true
+// create a post
+async function createPost() {
+  loading.value = true;
   try {
-    const { data } = await api.get('/albums?include=photos') 
-    albums.value = data.data || data
+    await api.post("/posts", {
+      caption: caption.value,
+      visibility: visibility.value,
+      photo_ids: selectedPhotos.value,
+    });
+
+    emit("created");
+    close();
   } catch (err) {
-    console.error('Failed to load albums:', err)
+    console.error("Post creation failed:", err.response?.data || err);
+    alert("Failed to create post.");
   } finally {
-    loadingAlbums.value = false
-  }
-}
-
-async function submitPost() {
-  if (!selectedPhotoIds.value.length) {
-    alert('Please select at least one photo.')
-    return
-  }
-
-  loading.value = true
-  const payload = {
-    description: description.value,
-    date: new Date().toISOString().split('T')[0],
-    photo_ids: selectedPhotoIds.value,
-  }
-
-  try {
-    const res = await api.post('/posts', payload)
-    console.log('Post created:', res.data)
-    emit('created')
-    close()
-  } catch (err) {
-    console.error('Error creating post:', err.response?.data || err.message)
-  } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function close() {
-  emit('close')
+  emit("close");
 }
 
-onMounted(loadAlbums)
+onMounted(loadPhotos);
 </script>
 
 <style scoped>
-.modal-backdrop {
+.modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0,0,0,0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 50;
 }
-.modal {
-  background: #fff;
+
+.modal-content {
+  background: white;
+  width: 700px;
   padding: 2rem;
-  border-radius: 10px;
-  width: 600px;
-  max-width: 95%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.albums {
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
-.album h4 {
-  margin-bottom: 0.3rem;
-}
-.photos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 0.5rem;
-}
-.photos img {
-  width: 100%;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: transform 0.2s, border 0.2s;
-}
-.photos img:hover {
-  transform: scale(1.05);
-}
-.photos img.selected {
-  outline: 3px solid #42b883;
-  transform: scale(1.03);
-}
 
-.album-title {
-  cursor: pointer;
-  color: #42b883;
+label {
   font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-.album-title:hover {
-  text-decoration: underline;
-}
-.photos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 0.5rem;
   margin-top: 0.5rem;
 }
-.photos img {
+
+textarea,
+select {
   width: 100%;
-  height: 80px;
-  object-fit: cover;
+  padding: 0.7rem;
   border-radius: 6px;
-  cursor: pointer;
-  transition: transform 0.2s, outline 0.2s;
+  border: 1px solid #ccc;
 }
-.photos img:hover {
-  transform: scale(1.05);
+
+.photos-box {
+  margin-top: 0.5rem;
 }
-.photos img.selected {
-  outline: 3px solid #42b883;
-  transform: scale(1.03);
-}
-.no-photos {
-  color: #999;
+
+.empty {
+  color: #777;
   font-size: 0.9rem;
 }
 
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.photo-item {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.photo-item.selected {
+  border-color: #ff8c42;
+}
+
+.photo-item img {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: cover;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+
+.btn {
+  padding: 0.7rem 1.4rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn.cancel {
+  background: #d77b42;
+  color: white;
+}
+
+.btn.create {
+  background: #ff8c42;
+  color: white;
+}
 </style>
