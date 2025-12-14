@@ -10,6 +10,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ChatController;
 use Illuminate\Http\Request;
 // Авторизация
 
@@ -97,4 +98,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Комментарии (добавление и удаление)
     Route::post('/comments', [CommentController::class, 'store']);
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
+
+    // Чаты
+    Route::get('/chats', [ChatController::class, 'index']); // list chatu
+    Route::get('/chats/{chat}', [ChatController::class, 'show']); // list zprav v chatu
+    Route::post('/chats/send', [ChatController::class, 'sendMessage']); // poslat zpravu
 });
