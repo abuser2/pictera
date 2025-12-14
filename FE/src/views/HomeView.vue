@@ -1,271 +1,200 @@
+/**
+ * ITU 2025
+ *
+ * @author Laura Fojtíková (xfojtil00)
+ * @file HomeView.vue
+ * @brief View for homepage
+ */
+
 <template>
-  <div class="stack home">
-    <div class="row space">
+  <div class="home-wrapper">
+
+    <!-- Header -->
+    <header class="header">
       <h2>Welcome to Pictera</h2>
-      <button class="btn" @click="showCreate = true">New Post</button>
-    </div>
+      <button class="btn primary" @click="showCreate = true">+ New Post</button>
+    </header>
 
-    <div class="grid home-actions">
-      <div class="card action" @click="goTo('albums')">
-        <h3>View Albums</h3>
-      </div>
+    <!-- Posts feed -->
+    <div class="posts-feed">
+      <div
+        v-for="post in posts"
+        :key="post.id"
+        class="post-card"
+      >
+        <!-- Post header -->
+        <div class="post-top">
+          <router-link
+            class="user-link"
+            :to="{ name: 'profile', params: { id: post.user?.id }}"
+          >
+            <strong>{{ post.user?.name || "Unknown User" }}</strong>
+          </router-link>
 
-      <div class="card action" @click="goTo('profile')">
-        <h3>My Profile</h3>
-      </div>
-    </div>
-
-    <div v-if="posts.length" class="posts">
-      <div v-for="post in posts" :key="post.id" class="post-card">
-        <div class="post-header">
-          <div class="poster-info">
-            <router-link
-              :to="{ name: 'profile', params: { id: post.user?.id } }"
-              class="poster-link"
-            >
-              <strong>{{ post.user?.name || 'Unknown User' }}</strong>
-            </router-link>
-          </div>
-
-          <div class="post-controls">
-            <small class="post-date">{{ formatDate(post.created_at || post.date) }}</small>
-
-            <div v-if="post.user?.id === currentUserId" class="actions">
-              <button class="btn small edit" @click="editPost(post)">✎</button>
-              <button class="btn small delete" @click="deletePost(post.id)">🗑</button>
-            </div>
-          </div>
+          <span class="date-text">{{ formatDate(post.created_at) }}</span>
+          <button class="btn small edit" @click="editingPost = post">✎</button>
         </div>
 
-        <p v-if="post.description || post.caption || post.text" class="post-desc">
-        {{ post.description || post.caption || post.text }}
-        </p>
-
-        <div v-if="post.photos?.length" class="post-photos">
+        <!-- Photos grid -->
+        <div v-if="post.photos?.length" class="photo-grid">
           <img
             v-for="photo in post.photos"
             :key="photo.id"
             :src="photo.url"
+            class="photo"
             alt="Post photo"
           />
         </div>
+
+        <!-- Caption -->
+        <p v-if="post.caption" class="caption">
+          {{ post.caption }}
+        </p>
       </div>
     </div>
 
-    <div v-else>
-    <p>No posts yet</p>
-    </div>
-
+    <!-- Create a post -->
     <CreatePostModal
       v-if="showCreate"
       @close="showCreate = false"
       @created="reloadPosts"
     />
+
+    <!-- Edit a post -->
+    <EditPostModal
+    v-if="editingPost"
+    :post="editingPost"
+    @close="editingPost = null"
+    @updated="reloadPosts"
+    @deleted="reloadPosts"
+  />
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { ref, onMounted } from 'vue'
-import CreatePostModal from '../components/CreatePostModal.vue'
-import api from '../utils/api'
+import { ref, onMounted } from "vue";
+import api from "../utils/api";
+import CreatePostModal from "../components/CreatePostModal.vue";
 
-const router = useRouter()
-const showCreate = ref(false)
-const posts = ref([])
-const currentUserId = ref(null)
+const posts = ref([]);
+const showCreate = ref(false);
+const editingPost = ref(null);
 
 function formatDate(dateStr) {
-  if (!dateStr) return '—';
+  if (!dateStr) return "";
   const d = new Date(dateStr);
-  if (isNaN(d)) return '—';
-  return d.toLocaleDateString('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   });
 }
 
-function goTo(route) {
-  router.push({ name: route })
-}
-
+// reload posts feed
 async function reloadPosts() {
   try {
-    const { data } = await api.get('/posts')
-    posts.value = data.data || data
+    const { data } = await api.get("/posts");
+    posts.value = data.data || data;
   } catch (err) {
-    console.error('Failed to load posts:', err)
+    console.error("Failed to load posts:", err);
   }
 }
 
-onMounted(async () => {
-  await fetchCurrentUser()
-  await reloadPosts()
-})
-
-async function fetchCurrentUser() {
-  try {
-    const { data } = await api.get('/me')
-    currentUserId.value = data.id
-  } catch (err) {
-    console.error('Failed to load current user:', err)
-  }
-}
-
-function editPost(post) {
-  console.log('Editing post:', post)
-}
-
-async function deletePost(id) {
-  if (!confirm('Are you sure you want to delete this post?')) return
-  try {
-    await api.delete(`/posts/${id}`)
-    await reloadPosts()
-  } catch (err) {
-    console.error('Failed to delete post:', err.response?.data || err)
-  }
-}
-
-onMounted(reloadPosts)
+onMounted(reloadPosts);
 </script>
 
 <style scoped>
-.home {
+.home-wrapper {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
   padding: 2rem;
   color: #fff;
-  background: #0f0f0f;
-  min-height: 100vh;
 }
 
-.home-actions {
-  justify-content: center;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 200px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  color: #000;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-.posts {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2rem;
-}
-
-.post-card {
-  background: #1b1b1b;
-  border: 1px solid #333;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 800px;
-  color: #f0f0f0;
-  padding: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.post-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-}
-
-.post-header {
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.3rem;
+  margin-bottom: 2rem;
 }
 
-.poster-info {
+.header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.posts-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Post Card */
+.post-card {
+  background: #1a1a1a;
+  padding: 1.2rem;
+  border-radius: 12px;
+  border: 1px solid #333;
+}
+
+/* Top section: username + date */
+.post-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.user-link {
+  color: #42b883;
+  text-decoration: none;
   font-weight: 600;
-  color: #fff;
 }
 
-.post-date {
+.user-link:hover {
+  color: #68e0a0;
+}
+
+.date-text {
   color: #aaa;
   font-size: 0.85rem;
 }
 
-.post-desc {
-  font-size: 1rem;
-  margin: 0.8rem 0;
-  color: #ddd;
-  line-height: 1.4;
-}
-
-.post-photos {
+/* Photos grid */
+.photo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.5rem;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
 }
 
-.post-photos img {
+.photo {
   width: 100%;
-  aspect-ratio: 1/1;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 8px;
-  transition: transform 0.2s, opacity 0.2s;
 }
 
-.post-photos img:hover {
-  transform: scale(1.03);
-  opacity: 0.9;
-}
-
-.poster-link {
-  text-decoration: none;
-  color: #42b883;
-  transition: color 0.2s;
-}
-.poster-link:hover {
-  color: #68e0a0;
-}
-
-.post-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.actions {
-  display: flex;
-  gap: 0.3rem;
-}
-
-.btn.small {
-  background: none;
-  border: none;
-  color: #ccc;
+/* Caption */
+.caption {
+  margin: 0.5rem 0 0 0;
   font-size: 1rem;
-  cursor: pointer;
-  transition: color 0.2s;
-  padding: 0.2rem;
+  color: #ddd;
 }
 
-.btn.small:hover {
+/* Button */
+.btn.primary {
+  background: #e67e22;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
   color: #fff;
 }
 
-.btn.small.delete:hover {
-  color: #e86b6b;
-}
-
-.btn.small.edit:hover {
-  color: #42b883;
+.btn.primary:hover {
+  background: #cf6f1d;
 }
 </style>

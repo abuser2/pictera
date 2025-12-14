@@ -4,6 +4,7 @@ import AlbumDetail from '../views/AlbumDetail.vue'
 import ProfileView from '../views/ProfileView.vue'
 import HomeView from '../views/HomeView.vue'
 import SharedAlbum from '../views/SharedAlbum.vue'
+import BookingsView from '../views/BookingsView.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -14,6 +15,7 @@ const routes = [
   { path: '/shares', name: 'shares', component: AlbumsView },
   { path: '/shares/:id', name: 'share-detail', component: AlbumDetail, props: true },
   { path: '/share/:token', name: 'shared-album', component: SharedAlbum},
+  { path: '/bookings', name: 'bookings', component: BookingsView },
 ]
 
 export default createRouter({ history: createWebHistory(), routes })
