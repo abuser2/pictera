@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted,watch } from "vue";
 import api from "../utils/api";
 
 const props = defineProps({
@@ -66,6 +66,16 @@ const selectedPhotoIds = ref(props.post.photos.map(p => p.id));
 const photos = ref([]);
 const loading = ref(false);
 
+watch(
+  () => props.post,
+  (post) => {
+    caption.value = post.caption || "";
+    visibility.value = post.visibility || "public";
+    selectedPhotoIds.value = post.photos.map(p => p.id);
+  },
+  { immediate: true }
+);
+
 // choose a photo
 function togglePhoto(id) {
   const i = selectedPhotoIds.value.indexOf(id);
@@ -76,11 +86,17 @@ function togglePhoto(id) {
 // load user's photos
 async function loadPhotos() {
   const { data } = await api.get("/photos");
-  photos.value = data.data || data;
+  const all = data.data || data;
+  photos.value = all.filter(p => p.user_id === props.post.user_id);
 }
 
 // save edited post
 async function save() {
+  if (!selectedPhotoIds.value.length) {
+    alert("Post must contain at least one photo.");
+    return;
+  }
+
   loading.value = true;
   try {
     await api.patch(`/posts/${props.post.id}`, {
@@ -90,6 +106,9 @@ async function save() {
     });
     emit("updated");
     close();
+  } catch (err) {
+    console.error("Update failed:", err.response?.data || err);
+    alert("Failed to update post.");
   } finally {
     loading.value = false;
   }
@@ -112,10 +131,20 @@ onMounted(loadPhotos);
 
 <style scoped>
 .modal {
-  background: #fff;
+  background: rgba(0,0,0,0.6);
   padding: 2rem;
   border-radius: 12px;
   width: 600px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(118, 118, 118, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
 .photos {

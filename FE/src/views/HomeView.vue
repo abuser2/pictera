@@ -33,7 +33,7 @@
 
           <span class="date-text">{{ formatDate(post.created_at) }}</span>
           <button
-            v-if="post.user?.id === currentUserId"
+            v-if="post.user && post.user.id == currentUserId"
             class="btn small edit"
             @click="editingPost = post"
           >
@@ -111,12 +111,8 @@ function editPost(post) {
 
 // reload posts feed
 async function reloadPosts() {
-  try {
-    const { data } = await api.get("/posts");
-    posts.value = data.data || data;
-  } catch (err) {
-    console.error("Failed to load posts:", err);
-  }
+  const { data } = await api.get('/posts')
+  posts.value = data.data ?? data
 }
 
 onMounted(async () => {
