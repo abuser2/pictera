@@ -1,10 +1,11 @@
 <template>
   <div class="profile">
     <h2>Profile</h2>
-    <div v-if="!auth.me">Nejste v systemu. </div>
+
+    <div v-if="!auth.me">Nejste v systému.</div>
     <div v-else>
+      <!-- Profile Info -->
       <div class="profile-header">
-        
         <div class="info-section" v-if="!isEditing">
           <p><strong>Name:</strong> {{ auth.me.name || '—' }}</p>
           <p><strong>Email:</strong> {{ auth.me.email || '—' }}</p>
@@ -16,265 +17,165 @@
         <form v-else class="edit-form" @submit.prevent="saveProfile">
           <div class="form-group">
             <label>Name:</label>
-            <input v-model="form.name" type="text" required>
+            <input v-model="form.name" type="text" required />
           </div>
-
           <div class="form-group">
             <label>Email:</label>
-            <input v-model="form.email" type="email" required>
+            <input v-model="form.email" type="email" required />
           </div>
-
           <div class="actions">
             <button type="submit" class="btn primary" :disabled="isSaving">
               {{ isSaving ? 'Saving...' : 'Save' }}
             </button>
-            <button type="button" class="btn" @click="cancelEdit" :disabled="isSaving">Cancel</button>
+            <button type="button" class="btn" @click="cancelEdit" :disabled="isSaving">
+              Cancel
+            </button>
           </div>
         </form>
       </div>
 
+      <!-- Albums Section -->
       <div class="albums-section">
         <h3>Albums</h3>
 
-        <div v-if="loading" class="load">Loading Albums...</div>
-        <div v-else-if="albums.length === 0" class="no-albums">
-          Nejsou zadne alba.
+        <!-- Filter Dropdown -->
+        <div class="visibility-filter">
+          <label>Filter by visibility:</label>
+          <select v-model="visibilityFilter">
+            <option value="">All</option>
+            <option value="public">Public</option>
+            <option value="private">Private</option>
+          </select>
         </div>
-        <div v-else class="albums-grid">
-           <AlbumCard 
-              v-for="a in visibleAlbums"
-              :key="a.id"
-              :album="a"
-              @open="openAlbum(a.id)"
-              @rename="startRename"
-              @delete="deleteAlbum"
-              @changeVisibility="updateVisibility"
+
+        <div v-if="loading" class="load">Loading Albums...</div>
+        <div v-else-if="filteredAlbums.length === 0" class="no-albums">
+          No albums available.
+        </div>
+
+        <div class="albums-list">
+          <!-- Inline Create Album -->
+          <div v-if="creating" class="album-card create-card">
+            <input
+              v-model="newAlbumName"
+              placeholder="Album name"
+              @keyup.enter="confirmCreate"
+              @keyup.esc="cancelCreate"
+              autofocus
             />
-            <button class="btn" @click="showCreate = true">New Album</button>
-            <AddAlbumModal
-              v-if="showCreate"
-              @close="showCreate = false"
-              @created="onCreated"
-            />
-          </div> 
+            <div class="row gap">
+              <button class="btn small" @click="confirmCreate">Create</button>
+              <button class="btn ghost small" @click="cancelCreate">Cancel</button>
+            </div>
+          </div>
+
+          <button v-if="!creating" class="btn" @click="startCreate">New Album</button>
+
+          <!-- Album Cards -->
+          <ProfileAlbumCard
+            v-for="album in filteredAlbums"
+            :key="album.id"
+            :album="album"
+          />
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useAuth } from '../stores/auth'
-import { useRouter } from 'vue-router'
-import api from '../utils/api'
-import AlbumCard from '../components/AlbumCard.vue'
-import AddAlbumModal from '../components/AddAlbumModal.vue'
+import { useProfileAlbumsStore } from '../stores/profileAlbums'
+import ProfileAlbumCard from '../components/ProfileAlbumCard.vue'
 
-
+// Stores
 const auth = useAuth()
-const router = useRouter()
+const albumsStore = useProfileAlbumsStore()
+
+// Profile Edit
 const isEditing = ref(false)
 const isSaving = ref(false)
-const loading = ref(false)
-const albums = ref([])
-const showCreate = ref(false)
-
-const form = reactive({
-  name: '',
-  email: ''
-})
-
-async function onCreated(){ showCreate.value = false; await load() }
+const form = reactive({ name: '', email: '' })
 
 function startEdit() {
-  form.name = auth.me.name || ''
-  form.email = auth.me.email || ''
+  form.name = auth.me?.name || ''
+  form.email = auth.me?.email || ''
   isEditing.value = true
 }
 
-function cancelEdit() {
-  isEditing.value = false
-}
+function cancelEdit() { isEditing.value = false }
 
 async function saveProfile() {
   if (isSaving.value) return
-  
   try {
     isSaving.value = true
-    // Используем действие из хранилища auth, которое уже настроено правильно.
     await auth.updateProfile({ name: form.name, email: form.email })
     isEditing.value = false
-  } catch (error) {
-    console.error('Error saving profile:', error)
-    alert('Could not save changes. Please try again.')
   } finally {
     isSaving.value = false
   }
 }
 
-async function load() {
-  loading.value = true
-  try {
-    const { data } = await api.get('/albums')
-    albums.value = data?.data || data
-  } catch (error) {
-    console.error('Chyba pri nacitani alba', error)
-  } finally {
-    loading.value = false
-  }
+// Album Management
+const creating = ref(false)
+const newAlbumName = ref('')
+const visibilityFilter = ref('')
+const loading = ref(true)
+
+const filteredAlbums = computed(() => {
+  if (!auth.me || !albumsStore.albums.length) return []
+  return albumsStore.visibleAlbums(auth.me.id, visibilityFilter.value || null)
+})
+
+function startCreate() {
+  creating.value = true
+  newAlbumName.value = ''
 }
 
-async function renameAlbum({ id, title }) {
-  await api.patch(`/albums/${id}`, { title })
-  await load()
+function cancelCreate() {
+  creating.value = false
 }
 
-async function deleteAlbum(id) {
-  await api.delete(`/albums/${id}`)
-  await load()
+async function confirmCreate() {
+  if (!newAlbumName.value.trim()) return
+  await albumsStore.create(newAlbumName.value)
+  creating.value = false
 }
 
-function openAlbum(id) { 
-  router.push({ name: 'album', params: { id }})
-}
-
-function logout(){
-  auth.logout()
-  router.push('/albums')
-}
-
-async function updateVisibility(album) {
-  await api.patch(`/albums/${album.id}`, { visibility: album.visibility })
-}
-
-const visibleAlbums = computed(() =>
-  albums.value.filter(a =>
-    a.visibility === 'public' || a.user_id === auth.me?.id
-  )
-)
-
-onMounted(load)
+// Fetch albums and user
+onMounted(async () => {
+  if (!auth.me) await auth.fetchMe()
+  if (!albumsStore.albums.length) await albumsStore.fetchAll()
+  loading.value = false
+})
 </script>
 
 <style scoped>
-.profile { 
-  max-width: 1200px; 
-  margin: 24px auto; 
-  padding: 12px; 
-}
+.profile { max-width: 1200px; margin: 24px auto; padding: 12px; color: #fff; }
+.profile-header { margin-bottom: 24px; }
+.form-group label { display: block; margin-bottom: 4px; }
+.form-group input { width: 100%; padding: 8px; border-radius: 4px; }
+.btn.primary { background: #42b983; color: #fff; border: none; padding: 8px 16px; cursor: pointer; }
 
-.profile-card {
-  margin-bottom: 32px;
-  background: #f8f9fa;
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.section {
-  background: #f8f9fa;
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.row {
+.albums-list {
   display: flex;
-  align-items: center;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 1rem; /* space between albums */
 }
 
-.space {
-  justify-content: space-between;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px;
-}
-
-.actions { 
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 4px;
-  font-weight: 500;
-}
-
-.form-group input {
+.create-card {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
+}
+.profile-album-card {
+  width: 100%;
+}
+
+.visibility-filter {
+  margin: 16px 0;
+}
+select {
+  padding: 4px 8px;
   border-radius: 4px;
 }
-
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-}
-
-.btn:hover {
-  background: #f5f5f5;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn.primary {
-  background: #42b983;
-  color: white;
-  border-color: #42b983;
-}
-
-.btn.primary:hover {
-  background: #3aa876;
-}
-
-.empty {
-  text-align: center;
-  padding: 32px;
-  color: #666;
-}
-
-.select {
-  display: inline-block;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #333;
-}
-
-.select:hover {
-  background-color: #f5f5f5;
-}
-
-.select:focus {
-  outline: none;
-  border-color: #42b983;
-  box-shadow: 0 0 0 2px rgba(66, 185, 131, 0.2);
-}
-
-.select:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 </style>
