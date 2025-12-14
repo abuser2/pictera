@@ -7,6 +7,13 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
+
+    public function index()
+    {
+        $users = User::all(); // or with pagination
+        return response()->json($users);
+    }
+
     public function show(Request $request, $id)
     {
         $user = User::findOrFail($id);
@@ -47,5 +54,17 @@ class UserController extends Controller
         $me->following()->detach($targetUser->id);
 
         return response()->json(['message' => 'Unfollowed successfully', 'following_ids' => $me->following()->pluck('following_id')]);
+    }
+    public function following($id)
+    {
+        // Find user or fail
+        $user = User::findOrFail($id);
+
+        // Load the users this user is following
+        $following = $user->following()->get();
+
+        return response()->json([
+            'data' => $following
+        ]);
     }
 }

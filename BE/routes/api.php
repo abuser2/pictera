@@ -42,6 +42,7 @@ Route::get('/share/{token}', [ShareController::class,'open']);
 
 // public user profiles
 Route::get('/users/{id}', [UserController::class, 'show']);
+Route::get('/users', [UserController::class, 'index']);
 
 // Комментарии (публичный просмотр)
 Route::get('/comments/{global_id}', [CommentController::class, 'index']);
@@ -89,8 +90,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/share/{token}/import', [ShareController::class, 'import']);
 
     // Подписки
+    Route::get('/users/{id}/following', [UserController::class, 'following']);
     Route::post('/users/{id}/follow', [UserController::class, 'follow']);
-    Route::delete('/users/{id}/follow', [UserController::class, 'unfollow']);
+    Route::delete('/users/{id}/unfollow', [UserController::class, 'unfollow']);
 
     // Лайки
     Route::post('/likes/toggle', [LikeController::class, 'toggle']);

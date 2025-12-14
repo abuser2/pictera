@@ -1,280 +1,263 @@
 <template>
   <div class="profile">
     <h2>Profile</h2>
-    <div v-if="!auth.me">Nejste v systemu. </div>
+
+    <div v-if="!auth.me">Nejste v systému.</div>
+
     <div v-else>
+      <!-- Profile Info -->
       <div class="profile-header">
-        
         <div class="info-section" v-if="!isEditing">
-          <p><strong>Name:</strong> {{ auth.me.name || '—' }}</p>
-          <p><strong>Email:</strong> {{ auth.me.email || '—' }}</p>
+          <p><strong>Name:</strong> {{ user.name || '—' }}</p>
+          <p><strong>Email:</strong> {{ user.email || '—' }}</p>
+
           <div class="actions">
-            <button class="btn primary" @click="startEdit">Edit</button>
+            <!-- Only show edit if it's your profile -->
+            <button v-if="isMe" class="btn primary" @click="startEdit">Edit</button>
           </div>
         </div>
 
         <form v-else class="edit-form" @submit.prevent="saveProfile">
           <div class="form-group">
             <label>Name:</label>
-            <input v-model="form.name" type="text" required>
+            <input v-model="form.name" type="text" required />
           </div>
-
           <div class="form-group">
             <label>Email:</label>
-            <input v-model="form.email" type="email" required>
+            <input v-model="form.email" type="email" required />
           </div>
-
           <div class="actions">
             <button type="submit" class="btn primary" :disabled="isSaving">
               {{ isSaving ? 'Saving...' : 'Save' }}
             </button>
-            <button type="button" class="btn" @click="cancelEdit" :disabled="isSaving">Cancel</button>
+            <button type="button" class="btn" @click="cancelEdit" :disabled="isSaving">
+              Cancel
+            </button>
           </div>
         </form>
       </div>
-
+      <button class="btn" @click="toggleFollow(user)" v-if="!isMe">
+        {{ user.is_following ? 'Unfollow' : 'Follow' }}
+      </button>
+      <!-- Albums Section -->
       <div class="albums-section">
         <h3>Albums</h3>
 
-        <div v-if="loading" class="load">Loading Albums...</div>
-        <div v-else-if="albums.length === 0" class="no-albums">
-          Nejsou zadne alba.
+        <div class="visibility-filter" v-if="isMe">
+          <label>Filter by visibility:</label>
+          <select v-model="visibilityFilter">
+            <option value="">All</option>
+            <option value="public">Public</option>
+            <option value="private">Private</option>
+          </select>
         </div>
-        <div v-else class="albums-grid">
-           <AlbumCard 
-              v-for="a in visibleAlbums"
-              :key="a.id"
-              :album="a"
-              @open="openAlbum(a.id)"
-              @rename="startRename"
-              @delete="deleteAlbum"
-              @changeVisibility="updateVisibility"
+
+        <div v-if="loading" class="load">Loading Albums...</div>
+        <div v-else-if="filteredAlbums.length === 0" class="no-albums">
+          No albums available.
+        </div>
+
+        <div class="albums-list">
+          <!-- Inline Create Album, only for own profile -->
+          <div v-if="creating && isMe" class="album-card create-card">
+            <input
+              v-model="newAlbumName"
+              placeholder="Album name"
+              @keyup.enter="confirmCreate"
+              @keyup.esc="cancelCreate"
+              autofocus
             />
-            <button class="btn" @click="showCreate = true">New Album</button>
-            <AddAlbumModal
-              v-if="showCreate"
-              @close="showCreate = false"
-              @created="onCreated"
-            />
-          </div> 
+            <div class="row gap">
+              <button class="btn small" @click="confirmCreate">Create</button>
+              <button class="btn ghost small" @click="cancelCreate">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Create button, only for own profile -->
+          <button v-if="!creating && isMe" class="btn" @click="startCreate">New Album</button>
+
+          <!-- Album Cards -->
+          <ProfileAlbumCard
+            v-for="album in filteredAlbums"
+            :key="album.id"
+            :album="album"
+            :isMe="isMe"
+          />
+        </div>
+      </div>
+      <div class="following-list">
+        <h3>Following</h3>
+
+        <div v-if="followingUsers.length" class="users-grid">
+          <div
+            v-for="user in followingUsers"
+            :key="user.id"
+            class="card user-card"
+            @click="goToUser(user.id)"
+            style="cursor:pointer;"
+          >
+            <strong>{{ user.name || 'Unknown' }}</strong>
+            <div v-if="user.email"><small>{{ user.email }}</small></div>
+          </div>
+        </div>
+
+        <div v-else>
+          <p>You're not following anyone yet.</p>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuth } from '../stores/auth'
-import { useRouter } from 'vue-router'
+import { useProfileAlbumsStore } from '../stores/profileAlbums'
+import ProfileAlbumCard from '../components/ProfileAlbumCard.vue'
 import api from '../utils/api'
-import AlbumCard from '../components/AlbumCard.vue'
-import AddAlbumModal from '../components/AddAlbumModal.vue'
-
 
 const auth = useAuth()
-const router = useRouter()
+const albumsStore = useProfileAlbumsStore()
+const route = useRoute()
+
+// Profile data
+const user = ref(null)
 const isEditing = ref(false)
 const isSaving = ref(false)
-const loading = ref(false)
-const albums = ref([])
-const showCreate = ref(false)
+const isMe = computed(() => user.value?.id === auth.me?.id)
+const form = reactive({ name: '', email: '' })
 
-const form = reactive({
-  name: '',
-  email: ''
+// Albums
+const creating = ref(false)
+const newAlbumName = ref('')
+const visibilityFilter = ref('')
+const loading = ref(true)
+
+const filteredAlbums = computed(() => {
+  if (!user.value || !albumsStore.albums.length) return []
+  // Only show public albums if it's another user's profile
+  const visibility = isMe.value ? visibilityFilter.value || null : 'public'
+  return albumsStore.visibleAlbums(user.value.id, visibility)
 })
 
-async function onCreated(){ showCreate.value = false; await load() }
-
+// Edit profile
 function startEdit() {
-  form.name = auth.me.name || ''
-  form.email = auth.me.email || ''
+  if (!isMe.value) return
+  form.name = user.value.name || ''
+  form.email = user.value.email || ''
   isEditing.value = true
 }
 
-function cancelEdit() {
-  isEditing.value = false
+const followingUsers = ref([])
+
+async function loadFollowingUsers() {
+  if (!userId.value) return
+  try {
+    const { data } = await api.get(`/users/${userId.value}/following`)
+    followingUsers.value = data.data || []
+  } catch (err) {
+    console.error('Failed to load following users:', err)
+    followingUsers.value = []
+  }
 }
 
+function cancelEdit() { isEditing.value = false }
+
 async function saveProfile() {
-  if (isSaving.value) return
-  
+  if (!isMe.value || isSaving.value) return
   try {
     isSaving.value = true
-    // Используем действие из хранилища auth, которое уже настроено правильно.
     await auth.updateProfile({ name: form.name, email: form.email })
+    user.value.name = form.name
+    user.value.email = form.email
     isEditing.value = false
-  } catch (error) {
-    console.error('Error saving profile:', error)
-    alert('Could not save changes. Please try again.')
   } finally {
     isSaving.value = false
   }
 }
 
-async function load() {
+// Album creation
+function startCreate() {
+  if (!isMe.value) return
+  creating.value = true
+  newAlbumName.value = ''
+}
+
+function cancelCreate() { creating.value = false }
+
+async function confirmCreate() {
+  if (!isMe.value || !newAlbumName.value.trim()) return
+  await albumsStore.create(newAlbumName.value)
+  creating.value = false
+}
+
+// Load user profile and albums
+async function loadProfile(id) {
   loading.value = true
+
+  if (!auth.me) await auth.fetchMe()
+
+  if (!id || Number(id) === auth.me.id) {
+    user.value = auth.me
+  } else {
+    const { data } = await api.get(`/users/${id}`)
+    user.value = data
+  }
+
+  userId.value = user.value.id   // ← set userId for following list
+  await loadFollowingUsers()      // ← actually load following users
+
+  await albumsStore.fetchAll()
+  loading.value = false
+}
+
+// Watch route change
+watch(
+  () => route.params.id,
+  (newId) => loadProfile(newId),
+  { immediate: true }
+)
+
+const following = ref(false)
+
+async function checkFollow() {
+  if (isMe.value) return
   try {
-    const { data } = await api.get('/albums')
-    albums.value = data?.data || data
-  } catch (error) {
-    console.error('Chyba pri nacitani alba', error)
-  } finally {
-    loading.value = false
+    const { data } = await api.get(`/users/${user.value.id}/is-following`)
+    following.value = data.following
+  } catch (err) {
+    console.error(err)
   }
 }
 
-async function renameAlbum({ id, title }) {
-  await api.patch(`/albums/${id}`, { title })
-  await load()
+async function toggleFollow(user) {
+  try {
+    if (user.is_following) {
+      await api.delete(`/users/${user.id}/unfollow`);
+      user.is_following = false;
+    } else {
+      await api.post(`/users/${user.id}/follow`);
+      user.is_following = true;
+    }
+  } catch (err) {
+    console.error('Failed to follow/unfollow:', err);
+  }
 }
 
-async function deleteAlbum(id) {
-  await api.delete(`/albums/${id}`)
-  await load()
-}
-
-function openAlbum(id) { 
-  router.push({ name: 'album', params: { id }})
-}
-
-function logout(){
-  auth.logout()
-  router.push('/albums')
-}
-
-async function updateVisibility(album) {
-  await api.patch(`/albums/${album.id}`, { visibility: album.visibility })
-}
-
-const visibleAlbums = computed(() =>
-  albums.value.filter(a =>
-    a.visibility === 'public' || a.user_id === auth.me?.id
-  )
-)
-
-onMounted(load)
+// After loading profile
+watch(() => user.value, checkFollow, { immediate: true })
 </script>
 
 <style scoped>
-.profile { 
-  max-width: 1200px; 
-  margin: 24px auto; 
-  padding: 12px; 
-}
-
-.profile-card {
-  margin-bottom: 32px;
-  background: #f8f9fa;
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.section {
-  background: #f8f9fa;
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.space {
-  justify-content: space-between;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px;
-}
-
-.actions { 
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 4px;
-  font-weight: 500;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-}
-
-.btn:hover {
-  background: #f5f5f5;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn.primary {
-  background: #42b983;
-  color: white;
-  border-color: #42b983;
-}
-
-.btn.primary:hover {
-  background: #3aa876;
-}
-
-.empty {
-  text-align: center;
-  padding: 32px;
-  color: #666;
-}
-
-.select {
-  display: inline-block;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #333;
-}
-
-.select:hover {
-  background-color: #f5f5f5;
-}
-
-.select:focus {
-  outline: none;
-  border-color: #42b983;
-  box-shadow: 0 0 0 2px rgba(66, 185, 131, 0.2);
-}
-
-.select:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
+.profile { max-width: 1200px; margin: 24px auto; padding: 12px; color: #fff; }
+.profile-header { margin-bottom: 24px; }
+.form-group label { display: block; margin-bottom: 4px; }
+.form-group input { width: 100%; padding: 8px; border-radius: 4px; }
+.btn.primary { background: #42b983; color: #fff; border: none; padding: 8px 16px; cursor: pointer; }
+.albums-list { display: flex; flex-direction: column; gap: 1rem; }
+.create-card { width: 100%; }
+.profile-album-card { width: 100%; }
+.visibility-filter { margin: 16px 0; }
+select { padding: 4px 8px; border-radius: 4px; }
 </style>

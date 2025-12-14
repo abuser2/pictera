@@ -5,7 +5,9 @@
       <div class="spacer"/>
       <button v-if="!auth.me" class="btn" @click="openLogin">Login</button>
       <div v-else class="user">
-        <span>{{ auth.me.name || 'User' }}</span>
+        <router-link :to="`/users/${auth.me?.id}`">
+          <button class="btn small">{{ auth.me.name || 'User' }}</button>
+        </router-link>
         <button class="btn ghost" @click="auth.logout()">Logout</button>
       </div>
     </header>
@@ -14,7 +16,7 @@
       <aside class="side">
 
         <router-link to="/home">Home</router-link>
-        <router-link to="/profile">Profile</router-link>
+        <router-link :to="`/users/${auth.me?.id}`">Profile</router-link>
         <router-link to="/albums">Albums</router-link>
         
         <div v-if="isAlbumsRoute && albums.length" class="sub-menu">
