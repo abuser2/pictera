@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GlobalId;
 use App\Models\Photo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -25,17 +26,21 @@ class PhotoController extends Controller
 
         $path = $req->file('photo')->store('photos','web');
 
-        $photo = Photo::create([
-            'user_id' => $req->user()->id,
+        $globalId = GlobalId::create()->id;
+        $photo = new Photo([
             'path' => $path,
             'original_name' => $req->file('photo')->getClientOriginalName(),
             'title' => $data['title'] ?? null,
             'description' => $data['description'] ?? null,
             'visibility' => $data['visibility'] ?? 'private',
         ]);
+        $photo->user_id = $req->user()->id;
+        $photo->global_id = $globalId;
+        $photo->save();
 
         return response()->json([
               'id'   => $photo->id,
+              'global_id' => $photo->global_id,
               'path' => $photo->path,
               'url'  => Storage::disk('web')->url($photo->path),
               'title' => $photo->title,

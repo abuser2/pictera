@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GlobalId;
 use App\Models\Album;
 use App\Models\Photo;
 use Illuminate\Http\Request;
@@ -60,12 +61,16 @@ class AlbumController extends Controller
             $coverPhotoId = $photo->id;
         }
 
-        $album = Album::create([
-            'user_id'=>$req->user()->id,
+        $globalId = GlobalId::create()->id;
+        $album = new Album([
             'name'=>$data['name'],
             'description'=>$data['description'] ?? null,
             'visibility'=>$data['visibility'] ?? 'private',
         ]);
+        $album->user_id = $req->user()->id;
+        $album->global_id = $globalId;
+        $album->save();
+        
         if ($coverPhotoId) {
             $album->cover_photo_id = $coverPhotoId;
             $album->save();

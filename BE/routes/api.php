@@ -9,6 +9,7 @@ use App\Http\Controllers\ShareController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LikeController;
+use App\Http\Controllers\CommentController;
 use Illuminate\Http\Request;
 // Авторизация
 
@@ -41,6 +42,8 @@ Route::get('/share/{token}', [ShareController::class,'open']);
 // public user profiles
 Route::get('/users/{id}', [UserController::class, 'show']);
 
+// Комментарии (публичный просмотр)
+Route::get('/comments/{global_id}', [CommentController::class, 'index']);
 
 // Авторизованные
 Route::middleware('auth:sanctum')->group(function () {
@@ -90,4 +93,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Лайки
     Route::post('/likes/toggle', [LikeController::class, 'toggle']);
+
+    // Комментарии (добавление и удаление)
+    Route::post('/comments', [CommentController::class, 'store']);
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
 });

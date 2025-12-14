@@ -198,47 +198,6 @@
 						"description": "Загрузка аватара пользователя."
 					},
 					"response": []
-				},
-				{
-					"name": "Toggle Like",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"type\": \"photo\",\n  \"id\": 1\n}"
-						},
-						"url": {
-							"raw": "http://127.0.0.1:8000/api/likes/toggle",
-							"protocol": "http",
-							"host": [
-								"127",
-								"0",
-								"0",
-								"1:8000"
-							],
-							"path": [
-								"api",
-								"likes",
-								"toggle"
-							]
-						},
-						"description": "Поставить или убрать лайк. type: photo, album, post."
-					},
-					"response": []
 				}
 			]
 		},
@@ -842,6 +801,52 @@
 							]
 						},
 						"description": "Изменить порядок фотографий в альбоме. Передайте массив ID фотографий в желаемом порядке."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Likes",
+			"item": [
+				{
+					"name": "Toggle Like",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"global_id\": 1\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/likes/toggle",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1:8000"
+							],
+							"path": [
+								"api",
+								"likes",
+								"toggle"
+							]
+						},
+						"description": "Поставить или убрать лайк по global_id."
 					},
 					"response": []
 				}

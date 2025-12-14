@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GlobalId;
 use App\Models\Post;
 use App\Models\Photo;
 use Illuminate\Http\Request;
@@ -24,12 +25,16 @@ class PostController extends Controller
             'photo_ids.*' => 'integer|exists:photos,id',
         ]);
 
+        $globalId = GlobalId::create()->id;
+
         // автор текущий пользователь
-        $post = Post::create([
+        $post = new Post([
             'user_id' => $request->user()->id,
             'caption' => $validated['caption'] ?? null,
             'visibility' => $validated['visibility'] ?? 'public',
         ]);
+        $post->global_id = $globalId;
+        $post->save();
 
         // привязать фотографии
         $post->photos()->sync($validated['photo_ids']);

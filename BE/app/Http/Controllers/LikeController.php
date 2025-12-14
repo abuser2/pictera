@@ -13,18 +13,24 @@ class LikeController extends Controller
     public function toggle(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'required|in:photo,album,post',
-            'id' => 'required|integer',
+            'global_id' => 'required|integer',
         ]);
 
-        $modelClass = match($validated['type']) {
-            'photo' => Photo::class,
-            'album' => Album::class,
-            'post'  => Post::class,
-        };
+        $globalId = $validated['global_id'];
+        $model = null;
 
-        $model = $modelClass::findOrFail($validated['id']);
+        if ($found = Photo::where('global_id', $globalId)->first()) {
+            $model = $found;
+        } elseif ($found = Album::where('global_id', $globalId)->first()) {
+            $model = $found;
+        } elseif ($found = Post::where('global_id', $globalId)->first()) {
+            $model = $found;
+        }
+
+        if (!$model) return response()->json(['message' => 'Entity not found'], 404);
+
         $user = $request->user();
+        $modelClass = get_class($model);
 
         // Ищем существующий лайк
         $like = $user->likes()->where('likeable_id', $model->id)->where('likeable_type', $modelClass)->first();
