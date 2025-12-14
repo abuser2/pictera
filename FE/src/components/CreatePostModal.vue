@@ -121,7 +121,7 @@ onMounted(loadPhotos);
 }
 
 .modal-content {
-  background: white;
+  background: rgb(134, 134, 134);
   width: 700px;
   padding: 2rem;
   border-radius: 12px;
@@ -140,7 +140,7 @@ select {
   width: 100%;
   padding: 0.7rem;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 1px solid #4e4e4e;
 }
 
 .photos-box {
@@ -148,7 +148,7 @@ select {
 }
 
 .empty {
-  color: #777;
+  color: white;
   font-size: 0.9rem;
 }
 
