@@ -28,6 +28,8 @@ class UserController extends Controller
             'created_at' => $user->created_at,
             'followers_ids' => $user->followers()->pluck('follower_id'),
             'following_ids' => $user->following()->pluck('following_id'),
+            'tag' => $user->tag,
+            'price' => $user->price
         ]);
     }
 
@@ -57,11 +59,12 @@ class UserController extends Controller
     }
     public function following($id)
     {
-        // Find user or fail
         $user = User::findOrFail($id);
 
-        // Load the users this user is following
-        $following = $user->following()->get();
+        // Users that $user follows
+        $following = $user->following()
+            ->select('users.id', 'users.name', 'users.email')
+            ->get();
 
         return response()->json([
             'data' => $following

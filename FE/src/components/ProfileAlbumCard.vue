@@ -1,3 +1,11 @@
+/**
+ * ITU 2025
+ *
+ * @author Radim Dvořák
+ * @file ProfileAlbumCard.vue
+ * @brief View for Album in profile
+ */
+
 <template>
   <div class="profile-album-card">
     <div class="album-header">
@@ -19,19 +27,6 @@
       <img v-for="photo in album.photos" :key="photo.id" :src="photo.url" alt="photo" />
     </div>
   </div>
-  <div class="album-comments" v-if="isMe">
-    <h4>Comments</h4>
-
-    <form @submit.prevent="postComment">
-        <input v-model="commentText" placeholder="Write a comment..." />
-        <button>Post</button>
-    </form>
-
-    <div v-for="c in comments" :key="c.id" class="comment">
-        <strong>{{ c.user.name }}</strong>
-        <p>{{ c.content }}</p>
-    </div>
-    </div>
 </template>
 
 <script setup>

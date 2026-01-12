@@ -9,34 +9,47 @@ use Illuminate\Http\Request;
 
 class AlbumController extends Controller
 {
-    public function index(Request $req) {
-        
-        if ($req->boolean('public')) {
-            return Album::with('coverPhoto')->where('visibility','public')->latest()->paginate(20);
-        }
-        
-        $user = $req->user();
-        $type = $req->query('type');
+    public function index(Request $req)
+    {
+        $authUser = $req->user();
+        $profileUserId = $req->query('user_id');
 
         $query = Album::with('coverPhoto');
 
+        if ($profileUserId) {
+            $query->where('user_id', $profileUserId);
+
+            // If NOT your own profile → public only
+            if (!$authUser || (int)$profileUserId !== (int)$authUser->id) {
+                $query->where('visibility', 'public');
+            }
+
+            return $query->latest()->paginate(20);
+        }
+
+        $type = $req->query('type');
+
         if ($type === 'owned') {
-            $query->where('user_id', $user->id);
+            $query->where('user_id', $authUser->id);
+
         } elseif ($type === 'shared') {
-            $sharedIds = $user->sharedAlbums()->pluck('albums.id');
-            $query->where(function($q) use ($user, $sharedIds) {
+            $sharedIds = $authUser->sharedAlbums()->pluck('albums.id');
+
+            $query->where(function ($q) use ($authUser, $sharedIds) {
                 $q->whereIn('id', $sharedIds)
-                  ->orWhere(function($q2) use ($user) {
-                      $q2->where('user_id', $user->id)->has('shares');
-                  });
+                ->orWhere(function ($q2) use ($authUser) {
+                    $q2->where('user_id', $authUser->id)->has('shares');
+                });
             });
+
         } else {
-            $sharedIds = $user->sharedAlbums()->pluck('albums.id');
-            $query->where(function($q) use ($user, $sharedIds) {
-                $q->where('user_id', $user->id)
-                  ->orWhereIn('id', $sharedIds);
+            $sharedIds = $authUser->sharedAlbums()->pluck('albums.id');
+
+            $query->where(function ($q) use ($authUser, $sharedIds) {
+                $q->where('user_id', $authUser->id)
+                ->orWhereIn('id', $sharedIds);
             });
-                }
+        }
 
         return $query->latest()->paginate(20);
     }

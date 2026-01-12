@@ -24,6 +24,8 @@ class User extends Authenticatable
         'email',
         'password',
         'is_photographer',
+        'price',
+        'tag'
     ];
     public function posts()      { return $this->hasMany(Post::class); }
     public function albums()     { return $this->hasMany(Album::class); }
